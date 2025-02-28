@@ -1,4 +1,5 @@
 import { readFileSync, existsSync } from "fs";
+// import initSqlJs from "sql.js";
 import { Database } from "sql.js";
 const initSqlJs = require("../third_party/sqljs/sql-wasm");
 
@@ -20,7 +21,13 @@ export interface Workspace {
 }
 
 export async function GetFiles(path: string) {
-  let db = new (await initSqlJs()).Database(readFileSync(path)) as Database;
+  let config = {
+    locateFile: (file: String) => `node_modules/sql.js/dist/${file}`
+    // locateFile: file => `../third_party/sqljs/${file}`
+  };
+  // const SQL = await initSqlJs(config);
+  const SQL = await initSqlJs();
+  let db = new SQL.Database(readFileSync(path)) as Database;
   let sql =
     "select value from ItemTable where key = 'history.recentlyOpenedPathsList'";
   let results = db.exec(sql);
