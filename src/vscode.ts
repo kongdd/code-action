@@ -3,7 +3,7 @@ import { basename, join, extname } from "path";
 import { readdirSync, readFileSync } from "fs";
 import { ExecOptions, exec } from "child_process";
 import { GetFiles } from "./files";
-import { getIcon } from "./plugin";
+import { getIcon, check_path } from "./plugin";
 
 import {
   // handleContextAction,
@@ -65,8 +65,10 @@ export class VSCode implements Plugin {
 
     let items = files.map(
       (file: any): ListItem => {
-        let address = file;
         file = decodeURIComponent(file);
+        file = check_path(file);
+        var address = encodeURIComponent(file);
+        // let address = file;
         let item = new ListItem<string>(basename(file), file, address);
         let ext = file.includes("remote") ? ".remote" : extname(file);
         item.icon = getIcon(ext);
@@ -143,7 +145,8 @@ export class VSCode implements Plugin {
     if (item.data.includes(".code-workspace")) cmds.push("--file-uri");
     else cmds.push("--folder-uri");
 
-    cmds.push(`"${item.data}"`);
+    var path = check_path(item.data);
+    cmds.push(`"${path}"`);
 
     let cmd = cmds.join(" ");
     let shell = Setting.Get("shell");

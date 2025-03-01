@@ -13,5 +13,14 @@ export function getIcon(ext: string): string {
   return join("icon", icon);
 }
 
+export function check_path(path: string): string {
+  // console.log(process.platform, path);
+  if (process.platform == "win32")  {
+    // path = decodeURIComponent(path);
+    return path.replace(/\\/g, "/").replace("file:///", "");
+  }
+  return path;
+}
+
 // Promisify the exec function
 export const execPromise = util.promisify(exec);
