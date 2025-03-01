@@ -9,7 +9,6 @@
     "utools-api-types": "^2.6.4"
   },
   "dependencies": {
-    "sql.js": "^1.12.0",
     "utools-helper": "^2.2.0"
   },
   "exclude": [

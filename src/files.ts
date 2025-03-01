@@ -1,8 +1,8 @@
 import { readFileSync, existsSync } from "fs";
 import { Database } from "sql.js";
-const initSqlJs = require("sql.js");
-// import initSqlJs from "sql.js";
-// const initSqlJs = require("../third_party/sqljs/sql-wasm");
+// 为了减少文件大小，从最新的"sql.js" copy出来
+const initSqlJs = require("../third_party/sqljs/sql-wasm");
+// const initSqlJs = require("sql.js");
 
 export interface Recent {
   entries: Entry[];
