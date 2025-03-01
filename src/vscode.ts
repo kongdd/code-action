@@ -3,7 +3,7 @@ import { basename, join, extname } from "path";
 import { readdirSync, readFileSync } from "fs";
 import { ExecOptions, exec } from "child_process";
 import { GetFiles } from "./files";
-import { getIcon } from "./icon";
+import { getIcon } from "./plugin";
 
 import {
   // handleContextAction,

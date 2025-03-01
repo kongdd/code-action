@@ -1,6 +1,7 @@
 import { readdirSync } from "fs";
 import { join } from "path";
-
+import * as util from "util";
+import { exec } from "child_process";
 
 export function getIcon(ext: string): string {
   let icons = readdirSync(join(__dirname, "..", "icon"));
@@ -11,3 +12,6 @@ export function getIcon(ext: string): string {
   if (!icon && ext) icon = "file.svg";
   return join("icon", icon);
 }
+
+// Promisify the exec function
+export const execPromise = util.promisify(exec);

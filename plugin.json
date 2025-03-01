@@ -15,6 +15,14 @@
       "icon": "icon/icon.png"
     },
     {
+      "code": "es",
+      "explain": "Everything文件搜索",
+      "cmds": [
+        "es"
+      ],
+      "icon": "icon/es.png"
+    },
+    {
       "code": "vsc-setting",
       "explain": "vscode 历史搜索配置信息",
       "cmds": ["vsc-setting"],
