@@ -8,5 +8,5 @@
     "experimentalDecorators": true,
     "types": ["utools-api-types", "@types/node"]
   }, 
-  "exclude": ["node_modules", "backup/"]
+  "exclude": ["node_modules", "backup/", "test"]
 }

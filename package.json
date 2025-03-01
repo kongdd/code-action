@@ -10,5 +10,8 @@
   },
   "dependencies": {
     "utools-helper": "^2.2.0"
-  }
+  }, 
+  "exclude": [
+    "node_modules", "dist", "test"
+  ]
 }

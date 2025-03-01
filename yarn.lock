@@ -4,26 +4,19 @@
 
 "@types/emscripten@*":
   version "1.40.0"
-  resolved "https://registry.npmmirror.com/@types/emscripten/-/emscripten-1.40.0.tgz#765f0c77080058faafd6b24de8ccebf573c1464c"
+  resolved "https://registry.npmmirror.com/@types/emscripten/-/emscripten-1.40.0.tgz"
   integrity sha512-MD2JJ25S4tnjnhjWyalMS6K6p0h+zQV6+Ylm+aGbiS8tSn/aHLSGNzBgduj6FB4zH0ax2GRMGYi/8G1uOxhXWA==
 
-"@types/node@*":
-  version "22.13.5"
-  resolved "https://registry.npmmirror.com/@types/node/-/node-22.13.5.tgz#23add1d71acddab2c6a4d31db89c0f98d330b511"
-  integrity sha512-+lTU0PxZXn0Dr1NBtC7Y8cR21AJr87dLLU953CWA6pMxxv/UDc7jYAY90upcrie1nRcD6XNG5HOYEDtgW5TxAg==
-  dependencies:
-    undici-types "~6.20.0"
-
-"@types/node@20.16.0":
+"@types/node@*", "@types/node@20.16.0":
   version "20.16.0"
-  resolved "https://registry.npmmirror.com/@types/node/-/node-20.16.0.tgz#02e5cd414f76bf345874ee65a1e5590d755d894f"
+  resolved "https://registry.npmmirror.com/@types/node/-/node-20.16.0.tgz"
   integrity sha512-vDxceJcoZhIVh67S568bm1UGZO0DX0hpplJZxzeXMKwIPLn190ec5RRxQ69BKhX44SUGIxxgMdDY557lGLKprQ==
   dependencies:
     undici-types "~6.19.2"
 
 "@types/sql.js@^1.4.9":
   version "1.4.9"
-  resolved "https://registry.npmmirror.com/@types/sql.js/-/sql.js-1.4.9.tgz#31d2bed39aa63e56ada7a4469aa6f19ee2c74b94"
+  resolved "https://registry.npmmirror.com/@types/sql.js/-/sql.js-1.4.9.tgz"
   integrity sha512-ep8b36RKHlgWPqjNG9ToUrPiwkhwh0AEzy883mO5Xnd+cL6VBH1EvSjBAAuxLUFF2Vn/moE3Me6v9E1Lo+48GQ==
   dependencies:
     "@types/emscripten" "*"
@@ -31,27 +24,22 @@
 
 throttle-debounce@^3.0.1:
   version "3.0.1"
-  resolved "https://registry.npmmirror.com/throttle-debounce/-/throttle-debounce-3.0.1.tgz#32f94d84dfa894f786c9a1f290e7a645b6a19abb"
+  resolved "https://registry.npmmirror.com/throttle-debounce/-/throttle-debounce-3.0.1.tgz"
   integrity sha512-dTEWWNu6JmeVXY0ZYoPuH5cRIwc0MeGbJwah9KUNYSJwommQpCzTySTpEe8Gs1J23aeWEuAobe4Ag7EHVt/LOg==
 
 undici-types@~6.19.2:
   version "6.19.8"
-  resolved "https://registry.npmmirror.com/undici-types/-/undici-types-6.19.8.tgz#35111c9d1437ab83a7cdc0abae2f26d88eda0a02"
+  resolved "https://registry.npmmirror.com/undici-types/-/undici-types-6.19.8.tgz"
   integrity sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==
-
-undici-types@~6.20.0:
-  version "6.20.0"
-  resolved "https://registry.npmmirror.com/undici-types/-/undici-types-6.20.0.tgz#8171bf22c1f588d1554d55bf204bc624af388433"
-  integrity sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg==
 
 utools-api-types@^2.6.4:
   version "2.6.4"
-  resolved "https://registry.npmmirror.com/utools-api-types/-/utools-api-types-2.6.4.tgz#56c08e94e4af85f179a2eb95f9cb42f029e6c33f"
+  resolved "https://registry.npmmirror.com/utools-api-types/-/utools-api-types-2.6.4.tgz"
   integrity sha512-pJuGvjSScwePuc6F/PVtL6DSCm+XzF78CBKxFUU82FON4vB8MGDXPCp6Y/25T/ndKyiyFj1zCR8ObyxtdikzPg==
 
 utools-helper@^2.2.0:
   version "2.2.0"
-  resolved "https://registry.npmmirror.com/utools-helper/-/utools-helper-2.2.0.tgz#212925d33f65c8f19fd70353c0a4677090a74eea"
+  resolved "https://registry.npmmirror.com/utools-helper/-/utools-helper-2.2.0.tgz"
   integrity sha512-EnyxkRg35ajuK4GglxuL+bFUAwGv7gRZdnsC2zg5m4stFlxc7S+i5boLkA3IIiOKvBKvFi94BA+bLrnJ1x6saA==
   dependencies:
     throttle-debounce "^3.0.1"

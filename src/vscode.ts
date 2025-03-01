@@ -4,6 +4,16 @@ import { readdirSync, readFileSync } from "fs";
 import { ExecOptions, exec } from "child_process";
 import { GetFiles } from "./files";
 
+import {
+  // handleContextAction,
+  // setupContextMenu,
+  InitContextMenu,
+  onContextmenu, 
+  // insertCSS,
+  // exec
+} from "./contextmenu";
+
+
 export class VSCode implements Plugin {
   code = "vsc";
   _storage: string;
@@ -11,47 +21,22 @@ export class VSCode implements Plugin {
   delay = 100;
 
   constructor() {
+    // 在父元素上监听所有 .list-item 的点击
+    document.addEventListener('DOMContentLoaded', InitContextMenu);
     document.onkeydown = (ev) => {
       if (ev.ctrlKey || ev.metaKey) {
         this.isCtrl = true;
       }
     };
-  }
-
-  /**
-   * 在 1.64 版本之前获取文件列表
-   */
-  before164Files() {
-    let data = JSON.parse(readFileSync(Setting.Get("storage")).toString());
-    let files: Array<any> = [];
-    for (const key in data.openedPathsList) {
-      if (
-        key.includes("workspaces") ||
-        key.includes("files") ||
-        key.includes("entries")
-      ) {
-        files = files.concat(data.openedPathsList[key]);
-      }
-    }
-
-    return [...new Set(files)].map((file: any) => {
-      if (typeof file === "string") return decodeURIComponent(file);
-      if (typeof file !== "object") return;
-
-      let keys = ["configURIPath", "folderUri", "fileUri"];
-      let k = keys.find((k) => k in file);
-      if (k) return decodeURIComponent(file[k]);
-
-      if ("workspace" in file)
-        return decodeURIComponent(file.workspace.configPath);
-    });
+    document.oncontextmenu = onContextmenu;
   }
 
   async files() {
     try {
       return await GetFiles(this.storage);
     } catch (error) {
-      return this.before164Files();
+      console.error(error);
+      return [];
     }
   }
 
@@ -167,17 +152,13 @@ export class VSCode implements Plugin {
     let timeout = parseInt(Setting.Get("timeout"));
     if (!timeout || timeout < 3000) timeout = 3000;
 
+    // console.log(cmd);
     this.execCmd(cmd, {
-      timeout: timeout,
-      windowsHide: true,
-      encoding: "utf-8",
+      timeout: timeout, windowsHide: true,
+      encoding: "utf-8"
     })
-      .then(() => {
-        utools.hideMainWindow();
-      })
-      .catch((reason) => {
-        throw reason.toString();
-      });
+      // .then(() => utools.hideMainWindow())
+      .catch((reason) => { throw reason.toString() });
   }
 
   getIcon(ext: string): string {

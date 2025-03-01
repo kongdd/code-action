@@ -37,18 +37,26 @@ export async function GetFiles(path: string) {
       "数据获取失败, 请检查 vsc-setting 配置, <br/> 注意当前仅在 vscode 1.64 版本进行过测试"
     );
   let data = JSON.parse(res) as Recent;
-
-  return data.entries.map((file) => {
+  
+  // 只检查前20个
+  let paths = data.entries.map((file) => {
     var path = "";
     if (typeof file === "string") {
       path = file;
     } else {
       path = file.fileUri || file.folderUri || file.workspace.configPath;
     }
-
-    const _path = decodeURIComponent(path.replace("file:///", ""));
-    const fileExists = existsSync(_path);
-    return { path, fileExists };
-  }).filter((item) => item.fileExists) // 过滤掉不存在的文件
-    .map((item) => item.path); // 最后只保留路径
+    return path;
+  });
+  
+  if (paths.length <= 20) {
+    return paths.map((path: String) => {
+      const _path = decodeURIComponent(path.replace("file:///", ""));
+      const fileExists = existsSync(_path);
+      return { path, fileExists };
+    })
+      .filter((item) => item.fileExists) // 过滤掉不存在的文件
+      .map((item) => item.path); // 最后只保留路径    
+  }
+  return paths;
 }
