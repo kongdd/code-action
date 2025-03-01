@@ -34,7 +34,8 @@ var ext_exclude = [".lnk", ".log"];
 
 async function GetFiles(pattern: string) {
   pattern = pattern || "soil moisture";
-  const app = path.resolve(__dirname, "../bin/es.exe");
+  // const app = path.resolve(__dirname, "../bin/es.exe");
+  const app = "C:/Program Files/Everything/es.exe";
   // alert(app);
   // const pattern = "soil moisture";
   const cmd = `"${app}" -n 200 /o-d "${pattern}"`; // e.g., "C:\path\to\es.exe" "soil moisture"
