@@ -1,7 +1,14 @@
 import { exec } from 'child_process';
-import { platform } from 'os';
+// import { platform } from 'os';
+// import clipboard from 'clipboardy';
 
-function handleContextAction(action: any, path: string) {
+function handleContextAction(action: string, path: string) {
+  if (action == "copy_path_linux") {
+    path = path.replace('\\', '\/');
+    navigator.clipboard.writeText(path);
+    return;
+  }
+  
   if (process.platform  === 'win32') {
     path = path.replace(/\//g, '\\');
   }
@@ -45,6 +52,7 @@ function setupContextMenu() {
         <div data-action="explorer.exe">Open in Directory</div>
         <div data-action="code.exe">Open in VSCode</div>
         <div data-action="code-insiders.cmd">Open in VSCode Insider</div>
+        <div data-action="copy_path_linux">Copy Linux Path</div>
       `;
   document.body.appendChild(menu);
   document.addEventListener('click', () => menu.style.display = 'none');

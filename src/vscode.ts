@@ -3,6 +3,7 @@ import { basename, join, extname } from "path";
 import { readdirSync, readFileSync } from "fs";
 import { ExecOptions, exec } from "child_process";
 import { GetFiles } from "./files";
+import { getIcon } from "./icon";
 
 import {
   // handleContextAction,
@@ -68,7 +69,7 @@ export class VSCode implements Plugin {
         file = decodeURIComponent(file);
         let item = new ListItem<string>(basename(file), file, address);
         let ext = file.includes("remote") ? ".remote" : extname(file);
-        item.icon = this.getIcon(ext);
+        item.icon = getIcon(ext);
         return item;
       }
     );
@@ -159,15 +160,5 @@ export class VSCode implements Plugin {
     })
       // .then(() => utools.hideMainWindow())
       .catch((reason) => { throw reason.toString() });
-  }
-
-  getIcon(ext: string): string {
-    let icons = readdirSync(join(__dirname, "..", "icon"));
-    let icon = icons.find((icon) => {
-      return "." + icon.split(".")[0] === ext.toLowerCase();
-    });
-    if (!icon && !ext) icon = "folder.svg";
-    if (!icon && ext) icon = "file.svg";
-    return join("icon", icon);
   }
 }
