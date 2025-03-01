@@ -15,7 +15,7 @@ import {
 
 
 export class VSCode implements Plugin {
-  code = "vsc";
+  code = "vsc_action";
   _storage: string;
   isCtrl = false;
   delay = 100;

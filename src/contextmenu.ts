@@ -1,8 +1,13 @@
 import { exec } from 'child_process';
+import { platform } from 'os';
 
 function handleContextAction(action: any, path: string) {
+  if (process.platform  === 'win32') {
+    path = path.replace(/\//g, '\\');
+  }
   var cmd = `${action} "${path}"`;
   console.log(cmd);
+
   // switch (action) {
   //   case 'vscode':
   //     // alert(`Would open ${path} in VSCode`);
