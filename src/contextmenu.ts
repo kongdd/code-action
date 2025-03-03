@@ -1,4 +1,6 @@
 import { exec } from 'child_process';
+import { statSync } from 'fs';
+import { dirname } from 'path';
 // import { platform } from 'os';
 // import clipboard from 'clipboardy';
 
@@ -8,8 +10,11 @@ function handleContextAction(action: string, path: string) {
     navigator.clipboard.writeText(path);
     return;
   }
-  
-  if (process.platform  === 'win32') {
+
+  if (action == "explorer.exe" && statSync(path).isFile()) {
+    path = dirname(path);
+  }
+  if (process.platform === 'win32') {
     path = path.replace(/\//g, '\\');
   }
   var cmd = `${action} "${path}"`;
@@ -154,10 +159,10 @@ function InitContextMenu() {
 }
 
 export {
-  handleContextAction, 
+  handleContextAction,
   setupContextMenu,
-  insertCSS, 
-  onContextmenu, 
+  insertCSS,
+  onContextmenu,
   InitContextMenu,
   exec
 }
