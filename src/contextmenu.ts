@@ -11,8 +11,10 @@ function handleContextAction(action: string, path: string) {
     return;
   }
 
-  if (action == "explorer.exe" && statSync(path).isFile()) {
-    path = dirname(path);
+  if (action == "explorer.exe" || action == "wt.exe -d") {
+    if (statSync(path).isFile()) {
+      path = dirname(path);
+    }
   }
   if (process.platform === 'win32') {
     path = path.replace(/\//g, '\\');
