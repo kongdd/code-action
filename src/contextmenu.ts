@@ -16,10 +16,12 @@ function handleContextAction(action: string, path: string) {
       path = dirname(path);
     }
   }
-  if (process.platform === 'win32') {
+  
+  let win_actions = ["explorer.exe", "wt.exe -d"];
+  if (win_actions.includes(action) && process.platform === 'win32') {
     path = path.replace(/\//g, '\\');
   }
-  var cmd = `${action} "${path}"`;
+  var cmd = `${action} "${path}"`;  
   console.log(cmd);
 
   // switch (action) {

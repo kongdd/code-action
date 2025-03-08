@@ -67,7 +67,11 @@ export class VSCode implements Plugin {
       (file: any): ListItem => {
         file = decodeURIComponent(file);
         file = check_path(file);
-        var address = encodeURIComponent(file);
+        var address = file;
+
+        if (!file.includes("vscode-remote")) {
+          address = encodeURIComponent(file);
+        } 
         // let address = file;
         let item = new ListItem<string>(basename(file), file, address);
         let ext = file.includes("remote") ? ".remote" : extname(file);

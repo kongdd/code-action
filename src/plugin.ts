@@ -15,6 +15,9 @@ export function getIcon(ext: string): string {
 
 export function check_path(path: string): string {
   // console.log(process.platform, path);
+  if (path.includes("vscode-remote")) {
+    return path;
+  }
   if (process.platform == "win32")  {
     // path = decodeURIComponent(path);
     return path.replace(/\\/g, "/").replace("file:///", "");
