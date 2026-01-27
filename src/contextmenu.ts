@@ -2,23 +2,26 @@ import { exec } from 'child_process';
 import { statSync } from 'fs';
 import { dirname } from 'path';
 import { Setting } from 'utools-helper';
-// import { platform } from 'os';
-// import clipboard from 'clipboardy';
+
+const MENU_ACTIONS = {
+    TERMINAL: 'terminal',
+    EXPLORER: 'explorer',
+    VSCODE: 'vscode',
+    VSCODE_INSIDER: 'vscode-insider',
+    COPY_LINUX_PATH: 'copy_path_linux'
+} as const;
 
 function handleContextAction(action: string, path: string) {
-    if (action == "copy_path_linux") {
-        path = path.replace('\\', '/');
-        navigator.clipboard.writeText(path);
+    // 复制 Linux 路径
+    if (action === MENU_ACTIONS.COPY_LINUX_PATH) {
+        navigator.clipboard.writeText(path.replace(/\\/g, '/'));
         return;
     }
 
-    // 获取配置的命令
-    const terminalCmd = Setting.Get("terminal") || "wt.exe -d";
-    const explorerCmd = Setting.Get("explorer") || "explorer.exe";
-    const codeCmd = Setting.Get("code") || "code";
+    const isRemote = path.includes('vscode-remote') || path.includes('remote');
 
-    // 对于终端和文件管理器,如果是文件则使用父目录
-    if (action == "terminal" || action == "explorer") {
+    // 对于终端和文件管理器，如果是文件则使用父目录
+    if ([MENU_ACTIONS.TERMINAL, MENU_ACTIONS.EXPLORER].includes(action as any)) {
         try {
             if (statSync(path).isFile()) {
                 path = dirname(path);
@@ -27,159 +30,114 @@ function handleContextAction(action: string, path: string) {
             console.error('Path does not exist:', path);
             return;
         }
+
+        // Windows 路径转换（仅本地路径）
+        if (process.platform === 'win32' && !isRemote) {
+            path = path.replace(/\//g, '\\');
+        }
     }
 
-    // Windows 路径转换 (仅对本地路径)
-    let dirActions = ["terminal", "explorer"];
-    const isRemote = path.includes('vscode-remote') || path.includes('remote');
-    if (dirActions.includes(action) && process.platform === 'win32' && !isRemote) {
-        path = path.replace(/\//g, '\\');
-    }
-
-    // 根据 action 类型选择命令
-    let cmd = "";
+    // 构建命令
+    let cmd = '';
     switch (action) {
-        case "terminal":
-            cmd = `${terminalCmd} "${path}"`;
+        case MENU_ACTIONS.TERMINAL:
+            cmd = `${Setting.Get("terminal") || "wt.exe -d"} "${path}"`;
             break;
-        case "explorer":
-            cmd = `${explorerCmd} "${path}"`;
+        case MENU_ACTIONS.EXPLORER:
+            cmd = `${Setting.Get("explorer") || "explorer.exe"} "${path}"`;
             break;
-        case "vscode":
-        case "vscode-insider":
-            // VSCode 需要使用 --folder-uri 或 --file-uri 参数
-            const vsCmd = action === "vscode" ? codeCmd : "code-insiders";
-            if (path.includes(".code-workspace")) {
-                cmd = `${vsCmd} --file-uri "${path}"`;
-            } else {
-                cmd = `${vsCmd} --folder-uri "${path}"`;
-            }
+        case MENU_ACTIONS.VSCODE:
+        case MENU_ACTIONS.VSCODE_INSIDER:
+            const vsCmd = action === MENU_ACTIONS.VSCODE ? (Setting.Get("code") || "code") : "code-insiders";
+            const uriFlag = path.includes(".code-workspace") ? "--file-uri" : "--folder-uri";
+            cmd = `${vsCmd} ${uriFlag} "${path}"`;
             break;
         default:
             cmd = `${action} "${path}"`;
     }
 
     console.log(cmd);
+    exec(cmd);
+}
 
-    new Promise((resolve, reject) => {
-        exec(cmd);
-    });
+function hideMenu(menu: HTMLElement) {
+    menu.style.display = 'none';
+}
+
+function showMenu(menu: HTMLElement, x: number, y: number) {
+    menu.style.display = 'block';
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
 }
 
 function setupContextMenu() {
-    // const menus = document.querySelectorAll('.context-menu');
-    // if (menus) return; // Already setup
     const menu = document.createElement('div');
     menu.className = 'context-menu';
     menu.innerHTML = `
-        <div data-action="terminal">Open in Terminal</div>
-        <div data-action="explorer">Open in Directory</div>
-        <div data-action="vscode">Open in VSCode</div>
-        <div data-action="vscode-insider">Open in VSCode Insider</div>
-        <div data-action="copy_path_linux">Copy Linux Path</div>
-      `;
+    <div data-action="${MENU_ACTIONS.TERMINAL}">Open in Terminal</div>
+    <div data-action="${MENU_ACTIONS.EXPLORER}">Open in Directory</div>
+    <div data-action="${MENU_ACTIONS.VSCODE}">Open in VSCode</div>
+    <div data-action="${MENU_ACTIONS.VSCODE_INSIDER}">Open in VSCode Insider</div>
+    <div data-action="${MENU_ACTIONS.COPY_LINUX_PATH}">Copy Linux Path</div>
+  `;
     document.body.appendChild(menu);
-    document.addEventListener('click', () => menu.style.display = 'none');
-    // document.addEventListener('mousemove', () => menu.style.display = 'none');
-    // Hide menu when mouse moves outside its bounds
+
+    // 点击空白处隐藏菜单
+    document.addEventListener('click', () => hideMenu(menu));
+
+    // 鼠标移出菜单区域时隐藏
     document.addEventListener('mousemove', (e) => {
         if (menu.style.display === 'block') {
             const rect = menu.getBoundingClientRect();
-            const isOutside =
-                e.clientX < rect.left ||
-                e.clientX > rect.right ||
-                e.clientY < rect.top ||
-                e.clientY > rect.bottom;
-
-            if (isOutside) {
-                menu.style.display = 'none';
-            }
+            const isOutside = e.clientX < rect.left || e.clientX > rect.right ||
+                e.clientY < rect.top || e.clientY > rect.bottom;
+            if (isOutside) hideMenu(menu);
         }
-    });
-
-    const items = document.querySelectorAll('.list-item');
-    items.forEach(item => {
-        item.addEventListener('contextmenu', (e: any) => {
-            e.preventDefault();
-            const path = item.getAttribute('data-path');
-            menu.style.display = 'block';
-            menu.style.left = `${e.pageX}px`;
-            menu.style.top = `${e.pageY}px`;
-
-            menu.querySelectorAll('div').forEach(menuItem => {
-                menuItem.onclick = () => {
-                    const action = menuItem.getAttribute('data-action');
-                    handleContextAction(action, path);
-                    menu.style.display = 'none';
-                };
-            });
-        });
     });
 }
 
+function onContextmenu(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    const descElement = target.parentElement?.querySelector(".list-item-description") as HTMLElement;
 
-function insertCSS(css: string) {
-    // Create a new style element
-    const style = document.createElement('style');
-    // Append to document head
-    style.innerHTML = css;
-    document.head.appendChild(style);
-};
+    if (!descElement) return;
 
+    e.preventDefault();
+    const menu = document.querySelector('.context-menu') as HTMLElement;
+    if (!menu) return;
 
-function onContextmenu(e: any) {
-    let div = e.target.parentElement.querySelector(".list-item-description");;
-    console.log(div);
+    // 获取并处理路径
+    let path = descElement.innerText.replace(/^file:\/\/\//, '');
+    const isRemote = path.includes('vscode-remote') || path.includes('remote');
 
-    if (div) {
-        e.preventDefault();
-        var menu = document.querySelector('.context-menu') as HTMLElement;;
-        var path = div.innerText;
+    showMenu(menu, e.pageX, e.pageY);
+    console.log('path:', path, 'isRemote:', isRemote);
 
-        // 处理路径格式
-        if (path.startsWith('file:///')) {
-            path = path.replace('file:///', '');
+    // 配置菜单项显示状态和点击事件
+    menu.querySelectorAll('div').forEach(menuItem => {
+        const action = menuItem.getAttribute('data-action');
+        const htmlItem = menuItem as HTMLElement;
+
+        // Remote 项目只显示 VSCode 相关操作
+        if (isRemote) {
+            const allowedActions = [MENU_ACTIONS.VSCODE, MENU_ACTIONS.VSCODE_INSIDER, MENU_ACTIONS.COPY_LINUX_PATH];
+            htmlItem.style.display = allowedActions.includes(action as any) ? 'block' : 'none';
+        } else {
+            htmlItem.style.display = 'block';
         }
 
-        const isRemote = path.includes('vscode-remote') || path.includes('remote');
-
-        // const path = item.getAttribute('data-path');
-        menu.style.display = 'block';
-        menu.style.left = `${e.pageX}px`;
-        menu.style.top = `${e.pageY}px`;
-        console.log('path:', path, 'isRemote:', isRemote);
-
-        menu.querySelectorAll('div').forEach(menuItem => {
-            const action = menuItem.getAttribute('data-action');
-
-            // remote 项目只显示特定菜单项
-            if (isRemote) {
-                // 只允许 vscode 和 copy_path_linux 操作
-                if (action === 'vscode' || action === 'vscode-insider' || action === 'copy_path_linux') {
-                    (menuItem as HTMLElement).style.display = 'block';
-                } else {
-                    (menuItem as HTMLElement).style.display = 'none';
-                }
-            } else {
-                // 本地项目显示所有菜单项
-                (menuItem as HTMLElement).style.display = 'block';
-            }
-
-            menuItem.onclick = () => {
-                handleContextAction(action, path);
-                menu.style.display = 'none';
-            };
-        });
-        console.log('oncontextmenu clicked:', e.target.textContent);
-        // 在这里添加你的点击处理逻辑
-    }
-    // setupContextMenu();
-    // console.log("右键菜单被触发");
-};
+        htmlItem.onclick = () => {
+            handleContextAction(action!, path);
+            hideMenu(menu);
+        };
+    });
+}
 
 function InitContextMenu() {
     setupContextMenu();
-    insertCSS(`
+
+    const style = document.createElement('style');
+    style.innerHTML = `
     .context-menu {
         position: absolute;
         background: white;
@@ -187,22 +145,16 @@ function InitContextMenu() {
         box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
         z-index: 1000;
         display: none;
-      }
-      .context-menu div {
+    }
+    .context-menu div {
         padding: 5px 10px;
         cursor: pointer;
-      }
-      .context-menu div:hover {
+    }
+    .context-menu div:hover {
         background: #f0f0f0;
-      }
-  `)
+    }
+    `;
+    document.head.appendChild(style);
 }
 
-export {
-    handleContextAction,
-    setupContextMenu,
-    insertCSS,
-    onContextmenu,
-    InitContextMenu,
-    exec
-}
+export { InitContextMenu, onContextmenu };

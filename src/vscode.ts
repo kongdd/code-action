@@ -1,18 +1,10 @@
 import { Plugin, ListItem, Setting } from "utools-helper";
-import { basename, join, extname } from "path";
-import { readdirSync, readFileSync, existsSync } from "fs";
+import { basename, extname } from "path";
+import { existsSync } from "fs";
 import { ExecOptions, exec } from "child_process";
 import { GetFiles } from "./files";
 import { getIcon, check_path } from "./plugin";
-
-import {
-  // handleContextAction,
-  // setupContextMenu,
-  InitContextMenu,
-  onContextmenu, 
-  // insertCSS,
-  // exec
-} from "./contextmenu";
+import { InitContextMenu, onContextmenu } from "./contextmenu";
 
 
 export class VSCode implements Plugin {
@@ -54,53 +46,45 @@ export class VSCode implements Plugin {
     this.isCtrl = false;
     let files = await this.files();
 
-    // 搜索
-    word.split(/\s+/g).forEach((keyword) => {
+    // 多关键词过滤
+    const keywords = word.split(/\s+/g).filter(k => k.trim());
+    if (keywords.length > 0) {
       files = files.filter((file: string) => {
-        return decodeURIComponent(file)
-          .toLowerCase()
-          .includes(keyword.trim().toLowerCase());
+        const lowerFile = decodeURIComponent(file).toLowerCase();
+        return keywords.every(k => lowerFile.includes(k.toLowerCase()));
       });
-    });
+    }
 
-    let items = files.map(
-      (file: any): ListItem => {
-        file = decodeURIComponent(file);
-        file = check_path(file);
-        var address = file;
+    // 转换为 ListItem 并过滤不存在的本地路径
+    let items = files
+      .map((file: any): ListItem => {
+        const decodedFile = decodeURIComponent(file);
+        const normalizedPath = check_path(decodedFile);
+        const isRemote = normalizedPath.includes("vscode-remote") || normalizedPath.includes("remote");
 
-        if (!file.includes("vscode-remote")) {
-          address = encodeURIComponent(file);
-        } 
-        // let address = file;
-        let item = new ListItem<string>(basename(file), file, address);
-        let ext = file.includes("remote") ? ".remote" : extname(file);
-        item.icon = getIcon(ext);
+        return new ListItem<string>(
+          basename(normalizedPath),
+          normalizedPath,
+          isRemote ? normalizedPath : encodeURIComponent(normalizedPath),
+          getIcon(isRemote ? ".remote" : extname(normalizedPath))
+        );
+      })
+      .filter(item => {
+        // remote 项目跳过路径检查，本地项目检查 description（未编码的路径）
+        const isRemote = item.description.includes("vscode-remote") || item.description.includes("remote");
+        return isRemote || existsSync(item.description);
+      });
+
+    // 无搜索词时，收藏项目显示在最前面
+    if (keywords.length === 0) {
+      const collects = this.getCollect().map(item => {
+        item.icon = "icon/icon-collect.png";
         return item;
-      }
-    ).filter(item => {
-      // remote 项目跳过路径检查
-      if (item.description.includes("vscode-remote") || item.description.includes("remote")) {
-        return true;
-      }
-      // 本地项目需要检查路径是否存在
-      return existsSync(item.description);
-    });
-
-    if (!word.trim()) {
-      let collects = this.getCollect();
-
-      collects.map((item) => (item.icon = "icon/icon-collect.png"));
-
-      // 去除已收藏的项目，避免重复显示
-      items = items.filter((item) => {
-        for (let i = 0; i < collects.length; i++) {
-          if (item.description == collects[i].description) return false;
-        }
-        return true;
       });
 
-      items = collects.concat(items);
+      // 去重：移除已在收藏列表中的项目
+      const collectPaths = new Set(collects.map(c => c.description));
+      items = collects.concat(items.filter(item => !collectPaths.has(item.description)));
     }
 
     return items;
@@ -126,53 +110,40 @@ export class VSCode implements Plugin {
     utools.showNotification(`${item.title} 置顶已移除`);
   }
 
-  private execCmd(
-    command: string,
-    options: { encoding: BufferEncoding } & ExecOptions
-  ): Promise<string> {
+  private execCmd(command: string, options: { encoding: BufferEncoding } & ExecOptions): Promise<string> {
     return new Promise((resolve, reject) => {
       exec(command, options, (_, stdout, stderr) => {
-        if (stderr) return reject(stderr);
-
-        resolve(stdout);
+        stderr ? reject(stderr) : resolve(stdout);
       });
     });
   }
 
   async select(item: ListItem<string>) {
+    // Ctrl 键：切换收藏状态
     if (this.isCtrl) {
-      let items = this.getCollect();
-      let isSave = items.find((i) => i.description == item.description);
-      if (isSave) this.removeCollect(item);
-      else this.saveCollect(item);
+      const collects = this.getCollect();
+      const isSaved = collects.some(i => i.description === item.description);
+      isSaved ? this.removeCollect(item) : this.saveCollect(item);
       this.isCtrl = false;
       return await this.search("");
     }
 
+    // 构建打开命令
     let code = Setting.Get("code");
-    if (code.trim().includes(" ")) code = `"${code}"`;
+    if (code.includes(" ")) code = `"${code}"`;
 
-    let cmds: String[] = [code];
-    if (item.data.includes(".code-workspace")) cmds.push("--file-uri");
-    else cmds.push("--folder-uri");
+    const uriFlag = item.data.includes(".code-workspace") ? "--file-uri" : "--folder-uri";
+    const path = check_path(item.data);
+    let cmd = `${code} ${uriFlag} "${path}"`;
 
-    var path = check_path(item.data);
-    cmds.push(`"${path}"`);
-
-    let cmd = cmds.join(" ");
-    let shell = Setting.Get("shell");
+    const shell = Setting.Get("shell");
     if (shell.trim()) cmd = `${shell} "${cmd}"`;
+
     console.log(cmd);
 
-    let timeout = parseInt(Setting.Get("timeout"));
-    if (!timeout || timeout < 3000) timeout = 3000;
+    const timeout = Math.max(parseInt(Setting.Get("timeout")) || 3000, 3000);
 
-    // console.log(cmd);
-    this.execCmd(cmd, {
-      timeout: timeout, windowsHide: true,
-      encoding: "utf-8"
-    })
-      // .then(() => utools.hideMainWindow())
-      .catch((reason) => { throw reason.toString() });
+    this.execCmd(cmd, { timeout, windowsHide: true, encoding: "utf-8" })
+      .catch((reason) => { throw reason.toString(); });
   }
 }
