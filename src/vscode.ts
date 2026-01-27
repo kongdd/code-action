@@ -1,6 +1,6 @@
 import { Plugin, ListItem, Setting } from "utools-helper";
 import { basename, join, extname } from "path";
-import { readdirSync, readFileSync } from "fs";
+import { readdirSync, readFileSync, existsSync } from "fs";
 import { ExecOptions, exec } from "child_process";
 import { GetFiles } from "./files";
 import { getIcon, check_path } from "./plugin";
@@ -78,7 +78,14 @@ export class VSCode implements Plugin {
         item.icon = getIcon(ext);
         return item;
       }
-    );
+    ).filter(item => {
+      // remote 项目跳过路径检查
+      if (item.description.includes("vscode-remote") || item.description.includes("remote")) {
+        return true;
+      }
+      // 本地项目需要检查路径是否存在
+      return existsSync(item.description);
+    });
 
     if (!word.trim()) {
       let collects = this.getCollect();

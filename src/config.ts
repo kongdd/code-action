@@ -3,12 +3,24 @@ import { platform } from "process";
 import { IConfigItem } from "utools-helper";
 
 let defaultShell = "bash -l -c";
+let defaultTerminal = "";
+let defaultExplorer = "";
+
 switch (platform) {
   case "win32":
     defaultShell = "";
+    defaultTerminal = "C:/Users/" + process.env.USERNAME + "/AppData/Local/Microsoft/WindowsApps/wt.exe -d";
+    defaultExplorer = "explorer.exe";
     break;
   case "darwin":
     defaultShell = "zsh -l -c";
+    defaultTerminal = "open -a Terminal";
+    defaultExplorer = "open";
+    break;
+  case "linux":
+    defaultShell = "bash -l -c";
+    defaultTerminal = "gnome-terminal --working-directory";
+    defaultExplorer = "xdg-open";
     break;
 }
 
@@ -60,6 +72,24 @@ export const config: IConfigItem[] = [
     placeholder: "shell 命令执行超时时间",
     required: false,
     default: "3000",
+    only_current_machine: true,
+  },
+  {
+    name: "terminal",
+    label: "terminal",
+    type: "input",
+    placeholder: "终端命令 (Windows: wt.exe -d, macOS: open -a Terminal, Linux: gnome-terminal --working-directory)",
+    required: false,
+    default: defaultTerminal,
+    only_current_machine: true,
+  },
+  {
+    name: "explorer",
+    label: "explorer",
+    type: "input",
+    placeholder: "文件管理器命令 (Windows: explorer.exe, macOS/Linux: open/xdg-open)",
+    required: false,
+    default: defaultExplorer,
     only_current_machine: true,
   },
 ];
