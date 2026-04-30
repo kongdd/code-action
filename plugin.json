@@ -2,11 +2,12 @@
   "name": "830ef6d0",
   "pluginName": "VSCode History Actions",
   "description": "快速搜索vscode历史项目，右键多种方式打开，包括Open in Terminal, Open in Directory, Open in VSCode, Open in VSCode Insider。注意Terminal调用的是wt.exe，需放到环境变量Path中。",
-  "version": "v3.4.0",
+  "version": "v3.5.0",
   "preload": "dist/preload.js",
   "author": "莫回首, kongdd",
   "homepage": "https://github.com/mohuishou/utools",
   "logo": "icon/icon.png",
+  "ignore": [".git", "src", "test", "bin", "*.md", "*.ts", "tsconfig.json", "package*.json"],
   "features": [
     {
       "code": "vsc_action",

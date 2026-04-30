@@ -1,5 +1,9 @@
 ## vscode 历史搜索
 
+<https://github.com/mohuishou/utools>
+
+<https://github.com/kongdd/utools-vscode>
+
 utools 插件，搜索 vscode 历史项目，点击回车打开
 
 - [**点击查看 chrome 历史搜索，vscode 历史项目搜索等更多插件**](https://github.com/mohuishou/utools)

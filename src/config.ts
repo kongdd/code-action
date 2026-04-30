@@ -63,7 +63,7 @@ export const config: IConfigItem[] = [
     type: "input",
     required: true,
     only_current_machine: true,
-    default: join(utools.getPath("appData"), "Code", "globalStorage", "storage.json"),
+      default: join(utools.getPath("appData"), "Code", "User", "globalStorage", "storage.json"),
   },
   {
     name: "timeout",
