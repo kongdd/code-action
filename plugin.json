@@ -16,6 +16,12 @@
       "icon": "icon/icon.png"
     },
     {
+      "code": "zed_action",
+      "explain": "zed历史项目搜索",
+      "cmds": ["zed_action"],
+      "icon": "icon/icon.png"
+    },
+    {
       "code": "es",
       "explain": "Everything文件搜索",
       "cmds": [

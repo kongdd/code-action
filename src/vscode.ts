@@ -110,7 +110,7 @@ export class VSCode implements Plugin {
     utools.showNotification(`${item.title} 置顶已移除`);
   }
 
-  private execCmd(command: string, options: { encoding: BufferEncoding } & ExecOptions): Promise<string> {
+  protected execCmd(command: string, options: { encoding: BufferEncoding } & ExecOptions): Promise<string> {
     return new Promise((resolve, reject) => {
       exec(command, options, (_, stdout, stderr) => {
         stderr ? reject(stderr) : resolve(stdout);
