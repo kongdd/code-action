@@ -6,17 +6,30 @@
   "devDependencies": {
     "@types/node": "20.16.0",
     "@types/sql.js": "^1.4.9",
+    "esbuild": "^0.28.0",
     "utools-api-types": "^2.6.4"
   },
   "dependencies": {
     "utools-helper": "^2.2.0"
   },
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist', {recursive:true, force:true})\"",
+    "build": "yarn clean && esbuild src/preload.ts --bundle --platform=node --target=node16 --outfile=dist/preload.js --external:../third_party/sqljs/sql-wasm",
+    "watch": "esbuild src/preload.ts --bundle --platform=node --target=node16 --outfile=dist/preload.js --external:../third_party/sqljs/sql-wasm --watch"
+  },
   "exclude": [
     "node_modules",
-    "dist",
+    "src",
     "test",
     ".git",
-    ".gitignore"
+    ".gitignore",
+    "tsconfig.json",
+    "package.json",
+    "yarn.lock",
+    "package-lock.json",
+    "**/*.map",
+    "**/*.js.gz",
+    "**/*.ts"
   ],
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

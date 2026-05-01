@@ -1,0 +1,38 @@
+{
+  "name": "830ef6d0",
+  "pluginName": "VSCode History Actions",
+  "description": "快速搜索vscode历史项目，右键多种方式打开，包括Open in Terminal, Open in Directory, Open in VSCode, Open in VSCode Insider。注意Terminal调用的是wt.exe，需放到环境变量Path中。",
+  "version": "v3.5.0",
+  "preload": "dist/preload.js",
+  "author": "莫回首, kongdd",
+  "homepage": "https://github.com/kongdd/utools-vscode",
+  "logo": "icon/icon.png",
+  "features": [
+    {
+      "code": "vsc_action",
+      "explain": "vscode历史项目搜索",
+      "cmds": ["vsc_action"],
+      "icon": "icon/icon.png"
+    },
+    {
+      "code": "zed_action",
+      "explain": "zed历史项目搜索",
+      "cmds": ["zed_action"],
+      "icon": "icon/icon.png"
+    },
+    {
+      "code": "es",
+      "explain": "Everything文件搜索",
+      "cmds": [
+        "es"
+      ],
+      "icon": "icon/es.png"
+    },
+    {
+      "code": "vsc-setting",
+      "explain": "vscode 历史搜索配置信息",
+      "cmds": ["vsc-setting"],
+      "icon": "icon/icon.png"
+    }
+  ]
+}

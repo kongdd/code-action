@@ -1,3 +1,9 @@
 dist
+
+release/icon
+release/preload.js
+release/third_party
+
 backup
 node_modules
+apps
