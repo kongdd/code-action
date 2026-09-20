@@ -17,11 +17,35 @@ export class VSCode implements Plugin {
     // 在父元素上监听所有 .list-item 的点击
     document.addEventListener('DOMContentLoaded', InitContextMenu);
     document.onkeydown = (ev) => {
-      if (ev.ctrlKey || ev.metaKey) {
-        this.isCtrl = true;
+      if (ev.ctrlKey || ev.metaKey) this.isCtrl = true;
+
+      if (["ArrowDown", "PageDown", "PageUp"].includes(ev.code)) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        this.move(ev.code === "PageUp" ? "ArrowUp" : "ArrowDown", ev.code === "ArrowDown" ? 1 : 10);
       }
     };
     document.oncontextmenu = onContextmenu;
+  }
+
+  private loadNextPage(): boolean {
+    const marker = document.querySelector(".list-item-selected + span");
+    const list = marker?.closest<HTMLElement>(".list");
+    if (!list) return false;
+
+    list.scrollTop++;
+    list.dispatchEvent(new Event("scroll"));
+    return true;
+  }
+
+  private move(code: "ArrowDown" | "ArrowUp", remaining: number) {
+    if (code === "ArrowDown" && this.loadNextPage()) {
+      requestAnimationFrame(() => this.move(code, remaining));
+      return;
+    }
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { code, key: code }));
+    if (remaining > 1) requestAnimationFrame(() => this.move(code, remaining - 1));
   }
 
   async files() {
