@@ -87,6 +87,9 @@ export class Everything implements Plugin {
   }
 
   async search(word?: string): Promise<ListItem[]> {
+    if (process.platform !== "win32") {
+      return [new ListItem("Everything 仅支持 Windows", "macOS / Linux 不可用", "")];
+    }
     let pattern = word || "";
     
     this.isCtrl = false;

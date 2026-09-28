@@ -1,5 +1,5 @@
 import { VSCode } from "./vscode";
-import { check_path } from "./plugin";
+import { check_path, quoteArg, shellWrap } from "./plugin";
 import { Setting } from "utools-helper";
 import { ListItem } from "utools-helper";
 
@@ -12,12 +12,8 @@ export class Zed extends VSCode {
       return await super.select(item);
     }
 
-    // 使用 zed 打开，description 是未编码的原始路径
-    const path = check_path(item.description);
-    let cmd = `zed "${path}"`;
-
-    const shell = Setting.Get("shell");
-    if (shell.trim()) cmd = `${shell} "${cmd}"`;
+    const target = check_path(item.description);
+    const cmd = shellWrap(Setting.Get("shell") || "", `zed ${quoteArg(target)}`);
 
     console.log(cmd);
 

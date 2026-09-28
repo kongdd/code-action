@@ -1,7 +1,8 @@
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { statSync } from 'fs';
 import { dirname } from 'path';
 import { Setting } from 'utools-helper';
+import { check_path, darwinTerminalScript, editorCmd, quoteArg } from './plugin';
 
 const MENU_ACTIONS = {
     TERMINAL: 'terminal',
@@ -11,51 +12,45 @@ const MENU_ACTIONS = {
     COPY_LINUX_PATH: 'copy_path_linux'
 } as const;
 
+function openTerminal(dir: string) {
+    const terminal = (Setting.Get("terminal") || "").trim();
+    // open -a Terminal 不会 cd 到目录
+    if (process.platform === "darwin" && !terminal) {
+        execFile("osascript", ["-e", darwinTerminalScript(dir), "-e", "tell application \"Terminal\" to activate"]);
+        return;
+    }
+    const bin = terminal || (process.platform === "linux" ? "gnome-terminal --working-directory" : "wt.exe -d");
+    exec(`${bin} ${quoteArg(dir)}`);
+}
+
 function handleContextAction(action: string, path: string) {
-    // 复制 Linux 路径
     if (action === MENU_ACTIONS.COPY_LINUX_PATH) {
-        navigator.clipboard.writeText(path.replace(/\\/g, '/'));
+        navigator.clipboard.writeText(path.replace(/\\/g, "/"));
         return;
     }
 
-    const isRemote = path.includes('vscode-remote') || path.includes('remote');
+    const isRemote = /vscode-remote:/i.test(path);
 
-    // 对于终端和文件管理器，如果是文件则使用父目录
-    if ([MENU_ACTIONS.TERMINAL, MENU_ACTIONS.EXPLORER].includes(action as any)) {
+    if (action === MENU_ACTIONS.TERMINAL || action === MENU_ACTIONS.EXPLORER) {
         try {
-            if (statSync(path).isFile()) {
-                path = dirname(path);
-            }
-        } catch (error) {
-            console.error('Path does not exist:', path);
+            if (statSync(path).isFile()) path = dirname(path);
+        } catch {
+            console.error("Path does not exist:", path);
             return;
         }
+        if (process.platform === "win32" && !isRemote) path = path.replace(/\//g, "\\");
+        if (action === MENU_ACTIONS.TERMINAL) return openTerminal(path);
 
-        // Windows 路径转换（仅本地路径）
-        if (process.platform === 'win32' && !isRemote) {
-            path = path.replace(/\//g, '\\');
-        }
+        const explorer = (Setting.Get("explorer") || "").trim()
+            || (process.platform === "darwin" ? "open" : process.platform === "linux" ? "xdg-open" : "explorer.exe");
+        exec(`${explorer} ${quoteArg(path)}`);
+        return;
     }
 
-    // 构建命令
-    let cmd = '';
-    switch (action) {
-        case MENU_ACTIONS.TERMINAL:
-            cmd = `${Setting.Get("terminal") || "wt.exe -d"} "${path}"`;
-            break;
-        case MENU_ACTIONS.EXPLORER:
-            cmd = `${Setting.Get("explorer") || "explorer.exe"} "${path}"`;
-            break;
-        case MENU_ACTIONS.VSCODE:
-        case MENU_ACTIONS.VSCODE_INSIDER:
-            const vsCmd = action === MENU_ACTIONS.VSCODE ? (Setting.Get("code") || "code") : "code-insiders";
-            const uriFlag = path.includes(".code-workspace") ? "--file-uri" : "--folder-uri";
-            cmd = `${vsCmd} ${uriFlag} "${path}"`;
-            break;
-        default:
-            cmd = `${action} "${path}"`;
-    }
-
+    const bin = action === MENU_ACTIONS.VSCODE_INSIDER ? "code-insiders" : (Setting.Get("code") || "code");
+    const cmd = action === MENU_ACTIONS.VSCODE || action === MENU_ACTIONS.VSCODE_INSIDER
+        ? editorCmd(bin, path, Setting.Get("shell") || "")
+        : `${action} ${quoteArg(path)}`;
     console.log(cmd);
     exec(cmd);
 }
@@ -107,8 +102,8 @@ function onContextmenu(e: MouseEvent) {
     if (!menu) return;
 
     // 获取并处理路径
-    let path = descElement.innerText.replace(/^file:\/\/\//, '');
-    const isRemote = path.includes('vscode-remote') || path.includes('remote');
+    const path = check_path(descElement.innerText.trim());
+    const isRemote = /vscode-remote:/i.test(path);
 
     showMenu(menu, e.pageX, e.pageY);
     console.log('path:', path, 'isRemote:', isRemote);

@@ -14,7 +14,7 @@ switch (platform) {
     break;
   case "darwin":
     defaultShell = "zsh -l -c";
-    defaultTerminal = "open -a Terminal";
+    defaultTerminal = "";
     defaultExplorer = "open";
     break;
   case "linux":
@@ -78,7 +78,7 @@ export const config: IConfigItem[] = [
     name: "terminal",
     label: "terminal",
     type: "input",
-    placeholder: "终端命令 (Windows: wt.exe -d, macOS: open -a Terminal, Linux: gnome-terminal --working-directory)",
+    placeholder: "留空：Windows wt.exe，macOS Terminal.app，Linux gnome-terminal",
     required: false,
     default: defaultTerminal,
     only_current_machine: true,

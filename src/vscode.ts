@@ -3,7 +3,7 @@ import { basename, extname } from "path";
 import { existsSync } from "fs";
 import { ExecOptions, exec } from "child_process";
 import { GetFiles } from "./files";
-import { getIcon, check_path } from "./plugin";
+import { getIcon, check_path, editorCmd } from "./plugin";
 import { InitContextMenu, onContextmenu } from "./contextmenu";
 
 
@@ -84,18 +84,18 @@ export class VSCode implements Plugin {
       .map((file: any): ListItem => {
         const decodedFile = decodeURIComponent(file);
         const normalizedPath = check_path(decodedFile);
-        const isRemote = normalizedPath.includes("vscode-remote") || normalizedPath.includes("remote");
+        const isRemote = /vscode-remote:/i.test(normalizedPath);
 
         return new ListItem<string>(
           basename(normalizedPath),
           normalizedPath,
-          isRemote ? normalizedPath : encodeURIComponent(normalizedPath),
+          normalizedPath,
           getIcon(isRemote ? ".remote" : extname(normalizedPath))
         );
       })
       .filter(item => {
         // remote 项目跳过路径检查，本地项目检查 description（未编码的路径）
-        const isRemote = item.description.includes("vscode-remote") || item.description.includes("remote");
+        const isRemote = /vscode-remote:/i.test(item.description);
         return isRemote || existsSync(item.description);
       });
 
@@ -136,8 +136,8 @@ export class VSCode implements Plugin {
 
   protected execCmd(command: string, options: { encoding: BufferEncoding } & ExecOptions): Promise<string> {
     return new Promise((resolve, reject) => {
-      exec(command, options, (_, stdout, stderr) => {
-        stderr ? reject(stderr) : resolve(stdout);
+      exec(command, options, (err, stdout, stderr) => {
+        err ? reject(stderr || err.message) : resolve(stdout);
       });
     });
   }
@@ -152,17 +152,7 @@ export class VSCode implements Plugin {
       return await this.search("");
     }
 
-    // 构建打开命令
-    let code = Setting.Get("code");
-    if (code.includes(" ")) code = `"${code}"`;
-
-    const uriFlag = item.data.includes(".code-workspace") ? "--file-uri" : "--folder-uri";
-    const path = check_path(item.data);
-    let cmd = `${code} ${uriFlag} "${path}"`;
-
-    const shell = Setting.Get("shell");
-    if (shell.trim()) cmd = `${shell} "${cmd}"`;
-
+    const cmd = editorCmd(Setting.Get("code"), check_path(item.description), Setting.Get("shell") || "");
     console.log(cmd);
 
     const timeout = Math.max(parseInt(Setting.Get("timeout")) || 3000, 3000);

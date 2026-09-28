@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
-import { env } from "process";
+import { homedir } from "os";
 import { Database } from "sql.js";
 // 为了减少文件大小，从最新的"sql.js" copy出来
 const initSqlJs = require("../third_party/sqljs/sql-wasm");
@@ -26,7 +26,7 @@ export interface Workspace {
 
 // VSCode 1.118+ 将历史迁移到此路径，需优先读取
 function getSharedStoragePath(): string {
-  const home = env.USERPROFILE || env.HOME;
+  const home = homedir();
   return home ? join(home, ".vscode-shared", "sharedStorage", "state.vscdb") : "";
 }
 
