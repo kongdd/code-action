@@ -29,6 +29,12 @@
       "icon": "icon/es.png"
     },
     {
+      "code": "fs_action",
+      "explain": "fs 全部文件搜索",
+      "cmds": ["fs_action"],
+      "icon": "icon/file.svg"
+    },
+    {
       "code": "vsc-setting",
       "explain": "vscode 历史搜索配置信息",
       "cmds": ["vsc-setting"],
