@@ -3,7 +3,8 @@ import { existsSync } from "fs";
 import { homedir } from "os";
 import { basename, extname, join } from "path";
 import { promisify } from "util";
-import { ListItem, Plugin } from "utools-helper";
+import { ListItem } from "utools-helper";
+import { SearchPlugin } from "./search";
 import { getIcon } from "./plugin";
 
 const locate = promisify(execFile);
@@ -11,16 +12,13 @@ const locate = promisify(execFile);
 const cargoBinary = join(homedir(), ".cargo", "bin", process.platform === "win32" ? "fs.exe" : "fs");
 const binary = existsSync(cargoBinary) ? cargoBinary : "fs";
 
-export class FileSearch implements Plugin {
+export class FileSearch extends SearchPlugin {
   code = "fs_action";
   delay = 200;
   placeholder = "搜索全部索引，例如 *.pdf、soil rain、path:papers Kong";
 
-  async enter(): Promise<ListItem[]> {
-    return [];
-  }
-
   async search(word = ""): Promise<ListItem[]> {
+    this.remember(word);
     if (!word.trim()) return [];
 
     try {

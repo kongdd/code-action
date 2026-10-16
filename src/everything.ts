@@ -1,4 +1,5 @@
-import { Plugin, ListItem, Setting } from "utools-helper";
+import { ListItem, Setting } from "utools-helper";
+import { SearchPlugin } from "./search";
 import { basename, join, extname } from "path";
 import { readdirSync, readFileSync } from "fs";
 import { ExecOptions, exec } from "child_process";
@@ -50,13 +51,14 @@ async function GetFiles(pattern: string) {
   // return filePaths;
 }
 
-export class Everything implements Plugin {
+export class Everything extends SearchPlugin {
   code = "es";
   _storage: string;
   isCtrl = false;
   delay = 100;
 
   constructor() {
+    super();
     // 在父元素上监听所有 .list-item 的点击
     document.addEventListener('DOMContentLoaded', InitContextMenu);
     document.onkeydown = (ev) => {
@@ -82,11 +84,8 @@ export class Everything implements Plugin {
     return this._storage;
   }
 
-  async enter(): Promise<ListItem[]> {
-    return await this.search("");
-  }
-
-  async search(word?: string): Promise<ListItem[]> {
+  async search(word = ""): Promise<ListItem[]> {
+    this.remember(word);
     if (process.platform !== "win32") {
       return [new ListItem("Everything 仅支持 Windows", "macOS / Linux 不可用", "")];
     }
@@ -173,7 +172,7 @@ export class Everything implements Plugin {
       if (isSave) this.removeCollect(item);
       else this.saveCollect(item);
       this.isCtrl = false;
-      return await this.search("");
+      return await this.search(this.keyword);
     }
     console.log(item);
     var path = item.data;

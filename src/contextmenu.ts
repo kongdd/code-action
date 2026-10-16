@@ -2,25 +2,25 @@ import { exec, execFile } from 'child_process';
 import { statSync } from 'fs';
 import { dirname } from 'path';
 import { Setting } from 'utools-helper';
-import { check_path, darwinTerminalScript, editorCmd, quoteArg } from './plugin';
+import { check_path, editorCmd, quoteArg } from './plugin';
 
 const MENU_ACTIONS = {
     TERMINAL: 'terminal',
     EXPLORER: 'explorer',
     VSCODE: 'vscode',
-    VSCODE_INSIDER: 'vscode-insider',
+    ZED: 'zed',
     COPY_LINUX_PATH: 'copy_path_linux'
 } as const;
 
 function openTerminal(dir: string) {
     const terminal = (Setting.Get("terminal") || "").trim();
-    // open -a Terminal 不会 cd 到目录
+    // 新实例确保 kitty 已运行时仍能接收工作目录参数。
     if (process.platform === "darwin" && !terminal) {
-        execFile("osascript", ["-e", darwinTerminalScript(dir), "-e", "tell application \"Terminal\" to activate"]);
+        execFile("/usr/bin/open", ["-na", "kitty", "--args", "--directory", dir], reportError);
         return;
     }
     const bin = terminal || (process.platform === "linux" ? "gnome-terminal --working-directory" : "wt.exe -d");
-    exec(`${bin} ${quoteArg(dir)}`);
+    exec(`${bin} ${quoteArg(dir)}`, reportError);
 }
 
 function handleContextAction(action: string, path: string) {
@@ -42,17 +42,21 @@ function handleContextAction(action: string, path: string) {
         if (action === MENU_ACTIONS.TERMINAL) return openTerminal(path);
 
         const explorer = (Setting.Get("explorer") || "").trim()
-            || (process.platform === "darwin" ? "open" : process.platform === "linux" ? "xdg-open" : "explorer.exe");
-        exec(`${explorer} ${quoteArg(path)}`);
+            || (process.platform === "darwin" ? "/usr/bin/open" : process.platform === "linux" ? "xdg-open" : "explorer.exe");
+        const bin = process.platform === "darwin" && explorer === "open" ? "/usr/bin/open" : explorer;
+        exec(`${bin} ${quoteArg(path)}`, reportError);
         return;
     }
 
-    const bin = action === MENU_ACTIONS.VSCODE_INSIDER ? "code-insiders" : (Setting.Get("code") || "code");
-    const cmd = action === MENU_ACTIONS.VSCODE || action === MENU_ACTIONS.VSCODE_INSIDER
-        ? editorCmd(bin, path, Setting.Get("shell") || "")
-        : `${action} ${quoteArg(path)}`;
+    const cmd = action === MENU_ACTIONS.VSCODE
+        ? editorCmd(Setting.Get("code") || "code", path, Setting.Get("shell") || "")
+        : editorCmd("zed", path, Setting.Get("shell") || "");
     console.log(cmd);
-    exec(cmd);
+    exec(cmd, reportError);
+}
+
+function reportError(error: Error | null) {
+    if (error) utools.showNotification(`打开失败：${error.message}`);
 }
 
 function hideMenu(menu: HTMLElement) {
@@ -72,7 +76,7 @@ function setupContextMenu() {
     <div data-action="${MENU_ACTIONS.TERMINAL}">Open in Terminal</div>
     <div data-action="${MENU_ACTIONS.EXPLORER}">Open in Directory</div>
     <div data-action="${MENU_ACTIONS.VSCODE}">Open in VSCode</div>
-    <div data-action="${MENU_ACTIONS.VSCODE_INSIDER}">Open in VSCode Insider</div>
+    <div data-action="${MENU_ACTIONS.ZED}">Open in Zed</div>
     <div data-action="${MENU_ACTIONS.COPY_LINUX_PATH}">Copy Linux Path</div>
   `;
     document.body.appendChild(menu);
@@ -93,7 +97,7 @@ function setupContextMenu() {
 
 function onContextmenu(e: MouseEvent) {
     const target = e.target as HTMLElement;
-    const descElement = target.parentElement?.querySelector(".list-item-description") as HTMLElement;
+    const descElement = target.closest(".list-item")?.querySelector(".list-item-description") as HTMLElement;
 
     if (!descElement) return;
 
@@ -115,7 +119,7 @@ function onContextmenu(e: MouseEvent) {
 
         // Remote 项目只显示 VSCode 相关操作
         if (isRemote) {
-            const allowedActions = [MENU_ACTIONS.VSCODE, MENU_ACTIONS.VSCODE_INSIDER, MENU_ACTIONS.COPY_LINUX_PATH];
+            const allowedActions = [MENU_ACTIONS.VSCODE, MENU_ACTIONS.COPY_LINUX_PATH];
             htmlItem.style.display = allowedActions.includes(action as any) ? 'block' : 'none';
         } else {
             htmlItem.style.display = 'block';

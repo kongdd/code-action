@@ -78,7 +78,7 @@ export const config: IConfigItem[] = [
     name: "terminal",
     label: "terminal",
     type: "input",
-    placeholder: "留空：Windows wt.exe，macOS Terminal.app，Linux gnome-terminal",
+    placeholder: "留空：Windows wt.exe，macOS kitty，Linux gnome-terminal",
     required: false,
     default: defaultTerminal,
     only_current_machine: true,

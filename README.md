@@ -13,7 +13,7 @@ utools 插件，搜索 vscode 历史项目，点击回车打开
 
 - 关键词: vsc 输入关键词可以搜索
 - 关键词: vsc-setting 查询设置
-- 将 `code` 加入 PATH，终端执行 `code .` 可打开。macOS 默认用 `zsh -l -c` 加载登录环境
+- 将 `code` 加入 PATH，终端执行 `code .` 可打开。macOS 本地项目直接调用 VSCode 应用，无需配置 PATH；远程项目仍通过 `zsh -l -c` 调用 `code`。
 
 ### fs 文件搜索
 

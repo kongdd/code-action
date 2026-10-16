@@ -1,4 +1,5 @@
-import { Plugin, ListItem, Setting } from "utools-helper";
+import { ListItem, Setting } from "utools-helper";
+import { SearchPlugin } from "./search";
 import { basename, extname } from "path";
 import { existsSync } from "fs";
 import { ExecOptions, exec } from "child_process";
@@ -7,13 +8,14 @@ import { getIcon, check_path, editorCmd } from "./plugin";
 import { InitContextMenu, onContextmenu } from "./contextmenu";
 
 
-export class VSCode implements Plugin {
+export class VSCode extends SearchPlugin {
   code = "vsc_action";
   _storage: string;
   isCtrl = false;
   delay = 100;
 
   constructor() {
+    super();
     // 在父元素上监听所有 .list-item 的点击
     document.addEventListener('DOMContentLoaded', InitContextMenu);
     document.onkeydown = (ev) => {
@@ -62,11 +64,8 @@ export class VSCode implements Plugin {
     return this._storage;
   }
 
-  async enter(): Promise<ListItem[]> {
-    return await this.search("");
-  }
-
-  async search(word?: string): Promise<ListItem[]> {
+  async search(word = ""): Promise<ListItem[]> {
+    this.remember(word);
     this.isCtrl = false;
     let files = await this.files();
 
@@ -149,7 +148,7 @@ export class VSCode implements Plugin {
       const isSaved = collects.some(i => i.description === item.description);
       isSaved ? this.removeCollect(item) : this.saveCollect(item);
       this.isCtrl = false;
-      return await this.search("");
+      return await this.search(this.keyword);
     }
 
     const cmd = editorCmd(Setting.Get("code"), check_path(item.description), Setting.Get("shell") || "");
