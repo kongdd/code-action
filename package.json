@@ -14,7 +14,8 @@
   },
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist', {recursive:true, force:true})\"",
-    "build": "yarn clean && esbuild src/preload.ts --bundle --platform=node --target=node16 --outfile=dist/preload.js --external:../third_party/sqljs/sql-wasm",
+    "build": "npm run clean && esbuild src/preload.ts --bundle --platform=node --target=node16 --outfile=dist/preload.js --external:../third_party/sqljs/sql-wasm",
+    "release": "npm run build && node scripts/release.cjs",
     "watch": "esbuild src/preload.ts --bundle --platform=node --target=node16 --outfile=dist/preload.js --external:../third_party/sqljs/sql-wasm --watch"
   },
   "exclude": [

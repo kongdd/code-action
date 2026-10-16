@@ -15,6 +15,26 @@ utools 插件，搜索 vscode 历史项目，点击回车打开
 - 关键词: vsc-setting 查询设置
 - 将 `code` 加入 PATH，终端执行 `code .` 可打开。macOS 本地项目直接调用 VSCode 应用，无需配置 PATH；远程项目仍通过 `zsh -l -c` 调用 `code`。
 
+### 构建与发布
+
+```bash
+npm install
+npm run release
+```
+
+在 uTools 开发者工具中导入 **`release/plugin.json`** 后打包，不要直接打包仓库根目录或 `dist/`。`package.json` 中的 `exclude` 不能替代独立发布目录。
+
+```text
+release/
+├── plugin.json
+├── dist/preload.js
+├── icon/
+├── third_party/sqljs/
+└── layui/                # 配置界面依赖
+```
+
+发布目录由脚本重新生成，保留现有相对路径，不包含 `.git`、源码或 `node_modules`；请勿手动修改其中的文件。
+
 ### fs 文件搜索
 
 - 输入 `fs_action`，检索 fs 配置中的全部索引；最多显示 200 条，回车用默认应用打开，右键选择其他打开方式。
