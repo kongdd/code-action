@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# NFS 挂载盘上的构建产物会携带 AppleDouble 旁路文件并拖慢 IO，
-# 因此默认将 Cargo 产物放到本机缓存目录。
+# Cargo 构建产物默认放在工程内的 src-tauri/target，可用 CARGO_TARGET_DIR 覆盖。
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$HOME/.cache/code-action-target}"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$root/src-tauri/target}"
 cd "$root"
 exec npx tauri "$@"

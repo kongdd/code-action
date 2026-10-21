@@ -142,8 +142,7 @@ header button, header input, header .menu { -webkit-app-region: no-drag; }
   text-overflow: ellipsis;
 }
 #results .shortcut { color: var(--muted); font-size: 13px; flex-shrink: 0; }
-#loading, #limit { margin: 0; padding: 12px 20px; color: var(--muted); font-size: 13px; }
-#limit { padding: 10px 20px; border-top: 1px solid var(--border); }
+#loading { margin: 0; padding: 12px 20px; color: var(--muted); font-size: 13px; }
 #empty {
   flex: 1;
   display: flex;

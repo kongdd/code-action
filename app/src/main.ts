@@ -49,7 +49,6 @@ const notice = element("#notice");
 const empty = element("#empty");
 const emptyTitle = element(".empty-title");
 const loading = element("#loading");
-const limit = element("#limit");
 const panel = element("#search-panel");
 const settingsPanel = element("#settings");
 const generalForm = element<HTMLFormElement>("form.pane");
@@ -70,9 +69,6 @@ let recording: { id: string; element: HTMLElement } | null = null;
 let autoCopyNext = false;
 let saveTimer: ReturnType<typeof setTimeout>;
 let noticeTimer: ReturnType<typeof setTimeout>;
-
-/// 与 Rust 侧 fs locate 的结果上限一致。
-const RESULT_LIMIT = 200;
 
 function report(error: unknown) {
   notice.textContent = String(error);
@@ -215,7 +211,6 @@ function schedule(delay = 180) {
   empty.hidden = true;
   notice.hidden = true;
   loading.hidden = false;
-  limit.hidden = true;
   timer = setTimeout(() => void search(request), delay);
 }
 
@@ -227,7 +222,6 @@ async function search(request: number) {
     selected = 0;
     loading.hidden = true;
     render();
-    limit.hidden = !(mode === "fs" && found.length >= RESULT_LIMIT);
     empty.hidden = items.length > 0;
     emptyTitle.textContent = mode === "fs" && !query.value.trim()
       ? "输入关键词搜索全部文件索引" : "没有匹配结果";
