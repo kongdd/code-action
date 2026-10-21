@@ -8,8 +8,17 @@ node_modules
 
 # macOS 在 NFS 挂载上生成的 AppleDouble 旁路文件
 ._*
-images
 .pi
 *.png
 *.svg
 *lock*
+
+# 锁文件、应用图标与前端资源需要入库，保证 CI 可复现、构建产物完整。
+!app/package-lock.json
+!app/src-tauri/Cargo.lock
+!app/src-tauri/icons/*.png
+!app/public/icons/*.svg
+
+# 仅保留 README 引用的截图。
+images/*
+!images/image01.png

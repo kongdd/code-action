@@ -23,6 +23,20 @@ macOS 应用位于 `~/.cache/code-action-target/release/bundle/macos/Code Action
 修改 `app/` 或工作流后推送、提交 PR 自动触发，也可在 GitHub Actions 页面手动运行。
 编译检查不代表已验证各平台的桌面交互。
 
+### 发布
+
+[Release](../.github/workflows/release.yml) 在推送 `v*` 标签、发布 GitHub Release 或手动触发时，
+并行构建三个平台的安装包，并上传到对应 Release：
+
+| 平台 | 运行器 | 产物 |
+| --- | --- | --- |
+| macOS（仅 Apple Silicon） | `macos-15` | `.dmg` |
+| Windows | `windows-latest` | `.exe` / `.msi` |
+| Linux | `ubuntu-24.04` | `.deb` |
+
+构建前会把 `Cargo.toml` 与 `tauri.conf.json` 的版本号对齐为标签版本，产物附 `checksums.txt`。
+尚未配置 Apple 公证与 Windows 代码签名，macOS 首次打开需在“系统设置 → 隐私与安全性”中放行。
+
 ### NFS 挂载
 
 macOS 在 NFS 挂载盘上生成的 `._*` AppleDouble 旁路文件可能破坏 Tauri 权限扫描。

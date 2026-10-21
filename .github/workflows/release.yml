@@ -1,0 +1,163 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "发布标签，例如 v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag || github.ref_name }}
+  # 发布事件与标签推送直接检出标签；手动触发时检出所选分支，由发布步骤补建标签。
+  REF: ${{ github.event.release.tag_name || github.ref }}
+
+jobs:
+  build:
+    name: Build (${{ matrix.artifact }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS 只发布 Apple Silicon：macos-15 运行器本身即 arm64。
+          - os: macos-15
+            artifact: macos-arm64
+            target: aarch64-apple-darwin
+            bundles: dmg
+          - os: windows-latest
+            artifact: windows-x64
+            target: x86_64-pc-windows-msvc
+            bundles: nsis,msi
+          - os: ubuntu-24.04
+            artifact: linux-x64
+            target: x86_64-unknown-linux-gnu
+            bundles: deb
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev libxdo-dev patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri -> target
+          key: ${{ matrix.target }}
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Align version with the release tag
+        run: |
+          node -e '
+            const fs = require("fs");
+            const tag = process.argv[1].replace(/^v/, "");
+            // MSI 只接受纯数字版本，去掉预发布与构建标识。
+            const [core] = tag.split(/[-+]/);
+            const parts = core.split(".").map(Number);
+            const version = parts.map((part, index) => Number.isFinite(part) ? part : 0).slice(0, 3);
+            while (version.length < 3) version.push(0);
+            const manifest = "src-tauri/Cargo.toml";
+            fs.writeFileSync(manifest, fs.readFileSync(manifest, "utf8")
+              .replace(/^version = ".*"/m, `version = "${version.join(".")}"`));
+            const config = "src-tauri/tauri.conf.json";
+            const parsed = JSON.parse(fs.readFileSync(config, "utf8"));
+            parsed.version = version.join(".");
+            fs.writeFileSync(config, JSON.stringify(parsed, null, 2) + "\n");
+          ' "$TAG"
+          grep -m1 '^version' src-tauri/Cargo.toml
+          grep -m1 '"version"' src-tauri/tauri.conf.json
+
+      - name: Build bundle
+        run: npx tauri build --ci --target "${{ matrix.target }}" --bundles "${{ matrix.bundles }}"
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist-release
+          find src-tauri/target -path '*bundle*' -type f \
+            \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' -o -name '*.deb' \) \
+            -exec cp {} dist-release/ \;
+          [ -n "$(ls -A dist-release)" ] || { echo "未找到构建产物"; exit 1; }
+          ls -l dist-release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: code-action-${{ matrix.artifact }}
+          path: app/dist-release
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      # gh 需要 git 仓库才能确定目标仓库并补建标签。
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: code-action-*
+          merge-multiple: true
+          path: artifacts
+
+      - name: Checksum
+        run: |
+          cd artifacts
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Attach assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## Code Action
+
+          | 平台 | 安装包 |
+          | --- | --- |
+          | macOS（Apple Silicon） | `.dmg` |
+          | Windows | `.exe` / `.msi` |
+          | Linux | `.deb` |
+
+          校验和见 `checksums.txt`。
+          EOF
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" artifacts/* --clobber
+          else
+            # 手动触发且标签尚未存在时，用当前提交补建标签。
+            gh release create "$TAG" --title "Code Action $TAG" --notes-file notes.md \
+              --target "$GITHUB_SHA" artifacts/*
+          fi
