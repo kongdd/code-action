@@ -36,7 +36,7 @@
 
 习惯 uTools？保留原来的工作流：输入 `vsc` 搜索最近项目，输入 `fs_action` 搜索文件，输入 `vsc-setting` 打开设置。
 
-![uTools 插件：搜索最近项目，右键选择打开方式](images/image01.png)
+![uTools 插件：搜索最近项目，右键选择打开方式](docs/image01.png)
 
 文件搜索依赖本机的 [fs](https://github.com/kongdd/fs) 索引；首次使用前需建立索引。
 
