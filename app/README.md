@@ -1,43 +1,44 @@
-# Code Action（独立版）
+# Code Action · 独立桌面版
 
-脱离 uTools 的本地启动器：搜索 VSCode/Zed 最近项目与全盘文件索引，回车直接打开。
+**按下快捷键，回到你的项目。**
 
-## 功能
+搜索最近项目和本机文件，回车直接打开。无需 uTools，也不必先启动编辑器、再翻找目录。
 
-- VSCode / Zed 最近项目搜索（读取 VSCode 的 `state.vscdb`，含 WAL 实时数据）
-- 全盘文件搜索（调用本机 `fs` 索引，支持 `*.pdf`、`soil rain`、`path:papers Kong` 等表达式）
-- 托盘常驻，`Ctrl/⌘ Shift Space` 显示/隐藏窗口，失焦即隐藏
-- macOS 功能快捷键：`⌘⌃E` → fs_action、`⌘⌃Z` → zed_action、`⌘⌃C` → vscode_action
-- 右键菜单：VSCode / Insiders / Zed / 目录 / 终端 / 置顶 / 复制路径
-- 设置与收藏仅保存在本机 `config.json`，无云同步
+## 把找东西的时间省下来
 
-顶栏只显示当前功能，点击功能胶囊可在 `vsc_action` / `zed_action` / `fs_action` 间切换。
+- **接着上次的工作**：输入项目名或路径关键词，找回 VSCode 最近打开的项目，包括远程工作区。
+- **换个编辑器也顺手**：同一个项目，可以交给 VSCode、Insiders 或 Zed 打开。
+- **文件散在不同目录也没关系**：用 `*.pdf` 找文档，用 `soil rain` 组合关键词，用 `path:papers Kong` 限定目录。
+- **常用项目不必反复搜**：收藏置顶，键盘直达；右键还可以打开目录、终端或复制路径。
+- **用完就收起**：托盘常驻，失焦隐藏；设置和收藏只保存在本机。
 
-## 开发
+## 开始使用
 
-```bash
-npm install
-npm run app:dev     # 开发运行
-npm run app:build   # 打包（产物在 $CARGO_TARGET_DIR/release/bundle）
-npm run test        # Rust 单元测试
-```
+目前尚未发布独立版安装包，可按[构建指南](../docs/development.md#独立桌面版)本地构建。macOS 构建后的 `.app` 可直接运行，或拖入“应用程序”。
 
-### NFS 挂载注意事项
+启动后按快捷键唤起，输入关键词，选择结果并回车。顶部功能按钮可切换项目与文件搜索。
 
-仓库位于 NFS 挂载盘时，macOS 会为每个文件生成 `._*` AppleDouble 旁路文件，
-会破坏 Tauri 的权限扫描与 Cargo 构建。因此：
+### macOS 默认快捷键
 
-- `npm run build` 会先清理旁路文件（`scripts/clean-appledouble.sh`）；
-- Cargo 产物默认输出到 `~/.cache/code-action-target`，避免在网络盘上编译。
+| 快捷键 | 功能 |
+| --- | --- |
+| `⌘⌃E` | 搜索文件 |
+| `⌘⌃Z` | 搜索项目，用 Zed 打开 |
+| `⌘⌃C` | 搜索项目，用 VSCode 打开 |
+| `⌘⇧Space` | 显示 / 隐藏窗口 |
 
-### 界面预览
+快捷键可以在设置中修改，也可以逐项启用或禁用。
 
-开发模式下访问 `http://127.0.0.1:1420/?preview` 可在浏览器中查看排版（使用模拟数据）。
+### 搜索时，手不用离开键盘
 
-## 常见问题
+| 按键 | 操作 |
+| --- | --- |
+| `↑` / `↓` | 选择结果 |
+| `Enter` | 打开 |
+| `⌘/Ctrl + 1–9` | 直接打开对应结果 |
+| `⌘/Ctrl + Enter` | 收藏 / 取消收藏 |
+| `Esc` | 收起窗口 |
 
-- **搜不到历史项目**：设置中检查“VSCode 数据库”。留空时自动依次尝试
-  `~/.vscode-shared/sharedStorage/state.vscdb`（VSCode 1.118+）与
-  `~/Library/Application Support/Code/User/globalStorage/state.vscdb`。
-- **搜不到文件**：需安装 [fs](https://github.com/kongdd/fs) 并建立索引（`fs updatedb`）。
-- **打开不了项目**：设置中填写 VSCode 可执行文件路径（macOS 会自动查找应用包内 CLI）。
+> 文件搜索需要安装 [fs](https://github.com/kongdd/fs) 并建立索引；文件变化后用 `fs updatedb` 更新。
+
+[反馈问题](https://github.com/kongdd/utools-vscode/issues) · [开发与排障](../docs/development.md) · [返回项目首页](../README.md)

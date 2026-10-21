@@ -1,47 +1,51 @@
-## vscode 历史搜索
+# Code Action
 
-<https://github.com/mohuishou/utools>
+**项目与文件，一搜即开。**
 
-<https://github.com/kongdd/utools-vscode>
+不必记住项目放在哪，也不必在文件夹之间来回翻找。唤起搜索，输入关键词，回车继续工作。
 
-utools 插件，搜索 vscode 历史项目，点击回车打开
+[独立桌面版](app/README.md) · [反馈问题](https://github.com/kongdd/utools-vscode/issues) · [开发与构建](docs/development.md)
 
-- [**点击查看 chrome 历史搜索，vscode 历史项目搜索等更多插件**](https://github.com/mohuishou/utools)
-- **你的 star 是我持续更新的动力**
+## 少找目录，多写代码
 
-### 使用说明
+- **找回最近项目**：搜索 VSCode 最近打开的项目，本地与远程工作区都能找到。
+- **文件不必逐层找**：按名称、类型或目录检索，比如 `*.pdf`、`soil rain`、`path:papers Kong`。
+- **按你的习惯打开**：独立版支持 VSCode、Insiders、Zed、目录与终端，不必先打开编辑器再找项目。
+- **常用项目放在前面**：收藏置顶，键盘选择，回车打开。
+- **数据留在本机**：设置与收藏保存在本地，不做云同步。
 
-- 关键词: vsc 输入关键词可以搜索
-- 关键词: vsc-setting 查询设置
-- 将 `code` 加入 PATH，终端执行 `code .` 可打开。macOS 本地项目直接调用 VSCode 应用，无需配置 PATH；远程项目仍通过 `zsh -l -c` 调用 `code`。
+## 选择你的使用方式
 
-### 构建与发布
+### 独立桌面版
 
-```bash
-npm install
-npm run release
-```
+无需 uTools，常驻托盘，随时用快捷键唤起。
 
-在 uTools 开发者工具中导入 **`release/plugin.json`** 后打包，不要直接打包仓库根目录或 `dist/`。`package.json` 中的 `exclude` 不能替代独立发布目录。
+macOS 默认快捷键：
 
-```text
-release/
-├── plugin.json
-├── dist/preload.js
-├── icon/
-├── third_party/sqljs/
-└── layui/                # 配置界面依赖
-```
+| 快捷键 | 功能 |
+| --- | --- |
+| `⌘⌃E` | 搜索文件 |
+| `⌘⌃Z` | 搜索项目，用 Zed 打开 |
+| `⌘⌃C` | 搜索项目，用 VSCode 打开 |
 
-发布目录由脚本重新生成，保留现有相对路径，不包含 `.git`、源码或 `node_modules`；请勿手动修改其中的文件。
+[了解独立版 →](app/README.md)
 
-### fs 文件搜索
+> 独立版尚未发布安装包，目前需[本地构建](docs/development.md#独立桌面版)。
 
-- 输入 `fs_action`，检索 fs 配置中的全部索引；最多显示 200 条，回车用默认应用打开，右键选择其他打开方式。
-- 支持表达式、通配符与过滤，例如 `soil rain`、`*.pdf`、`Kong exts:docx,pdf`、`path:papers Kong`。
-- 直接使用本机已安装的 [fs](https://github.com/kongdd/fs) 及现有查询配置，无需额外配置。
-- 索引需预先建立；文件变化后在终端执行 `fs updatedb` 更新。
+### uTools 插件
 
-### 使用示例
+习惯 uTools？保留原来的工作流：输入 `vsc` 搜索最近项目，输入 `fs_action` 搜索文件，输入 `vsc-setting` 打开设置。
 
-![vsc.gif](https://i.loli.net/2019/12/03/35QbFJU67LoH1kP.gif)
+![uTools 插件：搜索最近项目，右键选择打开方式](images/image01.png)
+
+文件搜索依赖本机的 [fs](https://github.com/kongdd/fs) 索引；首次使用前需建立索引。
+
+## 从这里开始
+
+唤起搜索 → 输入关键词 → `↑` / `↓` 选择 → `Enter` 打开。
+
+右键可以选择其他打开方式、复制路径或置顶项目。
+
+---
+
+uTools 插件基于 [mohuishou/utools](https://github.com/mohuishou/utools) 开发，感谢原作者。

@@ -76,11 +76,8 @@ fn toggle(app: &tauri::AppHandle) {
 fn apply_shortcuts(app: &tauri::AppHandle, shortcuts: &[Shortcut]) -> Result<(), String> {
     let manager = app.global_shortcut();
     manager.unregister_all().map_err(|e| e.to_string())?;
-    for shortcut in shortcuts {
+    for shortcut in shortcuts.iter().filter(|shortcut| shortcut.is_active()) {
         let accelerator = shortcut.accelerator.trim();
-        if accelerator.is_empty() {
-            continue;
-        }
         // 提前解析，非法组合在此处报错而不是静默失效。
         accelerator.parse::<Hotkey>().map_err(|e| format!("快捷键 {accelerator} 无效：{e}"))?;
         let action = shortcut.action.clone();
@@ -283,7 +280,8 @@ fn main() {
                 if let Err(error) = apply_shortcuts(app, &shortcuts) {
                     eprintln!("快捷键注册失败：{error}");
                 } else {
-                    eprintln!("已注册 {} 组全局快捷键", shortcuts.len());
+                    let count = shortcuts.iter().filter(|shortcut| shortcut.is_active()).count();
+                    eprintln!("已注册 {count} 组全局快捷键");
                 }
 
                 show(app);

@@ -9,6 +9,7 @@ interface Shortcut {
   id: string;
   accelerator: string;
   action: string;
+  enabled: boolean;
   autoCopy: boolean;
 }
 interface Settings {
@@ -379,12 +380,13 @@ function shortcutRow(shortcut: Shortcut): HTMLElement {
 
   const toggle = document.createElement("label");
   toggle.className = "switch";
-  toggle.title = "打开时自动复制路径";
+  toggle.title = "启用/禁用此全局快捷键";
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
-  checkbox.checked = shortcut.autoCopy;
+  checkbox.setAttribute("aria-label", "启用此全局快捷键");
+  checkbox.checked = shortcut.enabled;
   checkbox.addEventListener("change", () => {
-    shortcut.autoCopy = checkbox.checked;
+    shortcut.enabled = checkbox.checked;
     void saveShortcuts();
   });
   const track = document.createElement("span");
@@ -488,6 +490,7 @@ element("#shortcut-add").addEventListener("click", () => {
     id: `custom-${Date.now()}`,
     accelerator: "",
     action: "fs",
+    enabled: true,
     autoCopy: false,
   });
   renderShortcuts();

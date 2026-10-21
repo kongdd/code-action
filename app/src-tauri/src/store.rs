@@ -9,12 +9,22 @@ pub struct Shortcut {
     pub accelerator: String,
     /// vscode / zed / fs / toggle
     pub action: String,
+    pub enabled: bool,
     pub auto_copy: bool,
 }
 
 impl Default for Shortcut {
     fn default() -> Self {
-        Self { id: String::new(), accelerator: String::new(), action: "toggle".into(), auto_copy: false }
+        Self {
+            id: String::new(), accelerator: String::new(), action: "toggle".into(),
+            enabled: true, auto_copy: false,
+        }
+    }
+}
+
+impl Shortcut {
+    pub fn is_active(&self) -> bool {
+        self.enabled && !self.accelerator.trim().is_empty()
     }
 }
 
@@ -49,10 +59,10 @@ impl Default for Settings {
             zed: "zed".into(),
             terminal: String::new(),
             shortcuts: vec![
-                Shortcut { id: "toggle".into(), accelerator: "CommandOrControl+Shift+Space".into(), action: "toggle".into(), auto_copy: false },
-                Shortcut { id: "vscode".into(), accelerator: vscode.into(), action: "vscode".into(), auto_copy: false },
-                Shortcut { id: "zed".into(), accelerator: zed.into(), action: "zed".into(), auto_copy: false },
-                Shortcut { id: "fs".into(), accelerator: fs.into(), action: "fs".into(), auto_copy: false },
+                Shortcut { id: "toggle".into(), accelerator: "CommandOrControl+Shift+Space".into(), action: "toggle".into(), ..Shortcut::default() },
+                Shortcut { id: "vscode".into(), accelerator: vscode.into(), action: "vscode".into(), ..Shortcut::default() },
+                Shortcut { id: "zed".into(), accelerator: zed.into(), action: "zed".into(), ..Shortcut::default() },
+                Shortcut { id: "fs".into(), accelerator: fs.into(), action: "fs".into(), ..Shortcut::default() },
             ],
             aliases: BTreeMap::new(),
         }
@@ -105,6 +115,28 @@ impl Storage {
 mod tests {
     use super::*;
 
+    #[test]
+    fn legacy_shortcuts_remain_enabled() {
+        let shortcut: Shortcut = serde_json::from_value(serde_json::json!({
+            "accelerator": "Command+Control+E", "action": "fs", "autoCopy": false,
+        })).unwrap();
+        assert!(shortcut.enabled);
+        assert!(shortcut.is_active());
+        assert!(Settings::default().shortcuts.iter().all(Shortcut::is_active));
+    }
+
+    #[test]
+    fn disabled_or_empty_shortcuts_are_inactive() {
+        let mut shortcut = Settings::default().shortcuts.remove(0);
+        shortcut.enabled = false;
+        assert!(!shortcut.is_active());
+        let json = serde_json::to_string(&shortcut).unwrap();
+        assert!(!serde_json::from_str::<Shortcut>(&json).unwrap().enabled);
+        shortcut.enabled = true;
+        shortcut.accelerator = "  ".into();
+        assert!(!shortcut.is_active());
+    }
+
     #[cfg(target_os = "macos")]
     #[test]
     fn macos_shortcuts_match_actions() {
@@ -124,6 +156,7 @@ mod tests {
         data.preferences.favorites.push("/tmp/中文 项目".into());
         data.preferences.queries.insert("fs".into(), "*.pdf".into());
         data.settings.shortcuts[0].auto_copy = true;
+        data.settings.shortcuts[1].enabled = false;
         data.settings.aliases.insert("fs".into(), "文件".into());
         storage.save(data).unwrap();
         let loaded = Storage::load(path).unwrap();
@@ -131,6 +164,7 @@ mod tests {
         assert_eq!(loaded.data.preferences.queries["fs"], "*.pdf");
         assert_eq!(loaded.data.settings.code, "code");
         assert!(loaded.data.settings.shortcuts[0].auto_copy);
+        assert!(!loaded.data.settings.shortcuts[1].enabled);
         assert_eq!(loaded.data.settings.aliases["fs"], "文件");
     }
 
