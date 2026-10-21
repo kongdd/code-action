@@ -46,10 +46,11 @@ impl Default for Settings {
     fn default() -> Self {
         let binary = dirs::home_dir().unwrap_or_default().join(".cargo/bin")
             .join(if cfg!(windows) { "fs.exe" } else { "fs" });
+        // 功能快捷键跟随平台：macOS 用 ⌘⌃，Windows/Linux 用 Ctrl+Alt。
         let (vscode, zed, fs) = if cfg!(target_os = "macos") {
             ("Command+Control+C", "Command+Control+Z", "Command+Control+E")
         } else {
-            ("Control+Shift+V", "Control+Shift+Z", "Control+Shift+F")
+            ("Control+Alt+C", "Control+Alt+Z", "Control+Alt+E")
         };
         Self {
             database: String::new(),
@@ -137,13 +138,17 @@ mod tests {
         assert!(!shortcut.is_active());
     }
 
-    #[cfg(target_os = "macos")]
     #[test]
-    fn macos_shortcuts_match_actions() {
+    fn default_shortcuts_follow_the_platform() {
         let shortcuts = Settings::default().shortcuts;
+        let prefix = if cfg!(target_os = "macos") {
+            "Command+Control"
+        } else {
+            "Control+Alt"
+        };
         for (action, key) in [("fs", "E"), ("zed", "Z"), ("vscode", "C")] {
             let shortcut = shortcuts.iter().find(|item| item.action == action).unwrap();
-            assert_eq!(shortcut.accelerator, format!("Command+Control+{key}"));
+            assert_eq!(shortcut.accelerator, format!("{prefix}+{key}"));
         }
     }
 

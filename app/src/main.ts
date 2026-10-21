@@ -325,9 +325,10 @@ function context(event: MouseEvent, item: Item) {
 
 /* ---------- 快捷键设置 ---------- */
 
-// 组合键文本与 global-hotkey 解析格式一致，Command 表示 macOS 的 ⌘。
+// 组合键文本与 global-hotkey 解析格式一致：macOS 的 ⌘ 记为 Command，其他平台的 Win 键记为 Super。
+const IS_MAC = navigator.userAgent.includes("Mac");
 const MODIFIER_LABELS: [string, string][] = [
-  ["Meta", "Command"],
+  ["Meta", IS_MAC ? "Command" : "Super"],
   ["Control", "Control"],
   ["Alt", "Alt"],
   ["Shift", "Shift"],
