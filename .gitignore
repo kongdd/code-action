@@ -4,4 +4,12 @@ release/
 
 backup
 node_modules
-apps
+# apps
+
+# macOS 在 NFS 挂载上生成的 AppleDouble 旁路文件
+._*
+images
+.pi
+*.png
+*.svg
+*lock*

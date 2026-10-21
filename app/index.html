@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Code Action</title>
+  </head>
+  <body>
+    <main id="app">
+      <header>
+        <div class="tabs">
+          <img class="logo" src="/icons/vscode.svg" alt="" />
+          <span class="brand">Code Action</span>
+          <div class="modes">
+            <button id="mode-toggle" class="chip" aria-haspopup="listbox" aria-expanded="false">fs_action</button>
+            <ul id="mode-menu" class="menu" role="listbox" aria-label="搜索模式" hidden>
+              <li role="option" data-mode="vscode" aria-selected="false">vsc_action</li>
+              <li role="option" data-mode="zed" aria-selected="false">zed_action</li>
+              <li role="option" data-mode="fs" aria-selected="false">fs_action</li>
+            </ul>
+          </div>
+        </div>
+        <input id="query" type="search" placeholder="搜索全部索引，例如 *.pdf、soil rain、path:papers Kong"
+          autocomplete="off" spellcheck="false" aria-label="搜索" role="combobox"
+          aria-autocomplete="list" aria-controls="results" aria-expanded="true" />
+        <button id="settings-toggle" title="设置" aria-label="设置">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M10 7.4a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2Z" />
+            <path d="M10 2.6v1.7M10 15.7v1.7M2.6 10h1.7M15.7 10h1.7M4.8 4.8l1.2 1.2M14 14l1.2 1.2M15.2 4.8L14 6M6 14l-1.2 1.2" />
+          </svg>
+        </button>
+        <button id="hide" title="隐藏 (Esc)" aria-label="隐藏">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M5 5l10 10M15 5L5 15" />
+          </svg>
+        </button>
+      </header>
+
+      <p id="notice" hidden></p>
+      <section id="search-panel">
+        <p id="loading" hidden>搜索中…</p>
+        <p id="limit" hidden>已显示前 200 条，请补充关键字以缩小范围</p>
+        <ul id="results" role="listbox" aria-label="搜索结果"></ul>
+        <div id="empty" hidden>
+          <img src="/icons/file.svg" alt="" />
+          <p class="empty-title"></p>
+          <p class="empty-hint">↑↓ 选择 · ↵ 打开 · ⌘↵ 置顶 · Esc 隐藏</p>
+        </div>
+      </section>
+
+      <section id="settings" hidden>
+        <nav class="tabs-bar" role="tablist">
+          <button class="tab" role="tab" data-tab="shortcut" aria-selected="true">全局快捷键</button>
+          <button class="tab" role="tab" data-tab="alias" aria-selected="false">功能别名</button>
+          <button class="tab" role="tab" data-tab="general" aria-selected="false">基础设置</button>
+        </nav>
+
+        <div class="pane" data-pane="shortcut">
+          <div class="rows" id="shortcut-rows"></div>
+          <button class="outline" id="shortcut-add" type="button">＋ 新增</button>
+          <p class="hint">点击组合键后直接按下，需包含 ⌘/Ctrl/Alt/Shift；Esc 取消录制。</p>
+        </div>
+
+        <div class="pane" data-pane="alias" hidden>
+          <div class="rows" id="alias-rows"></div>
+          <p class="hint">别名会显示在顶部功能胶囊上，留空则使用默认名称。</p>
+        </div>
+
+        <form class="pane" data-pane="general" hidden>
+          <label>VSCode 数据库<input name="database" placeholder="留空自动检测，支持 shared storage" /></label>
+          <label>fs 可执行文件<input name="fsBinary" required /></label>
+          <label>VSCode 可执行文件<input name="code" required /></label>
+          <label>VSCode Insiders 可执行文件<input name="insiders" required /></label>
+          <label>Zed 可执行文件<input name="zed" required /></label>
+          <label>终端可执行文件<input name="terminal" placeholder="留空使用系统默认终端" /></label>
+          <small>填写可执行文件名或完整路径，不附加参数。所有数据仅保存在本机。</small>
+          <div><button type="submit">保存</button><button id="settings-cancel" type="button">取消</button></div>
+        </form>
+      </section>
+
+      <div id="context-menu" role="menu" hidden></div>
+    </main>
+    <script type="module" src="/src/bootstrap.ts"></script>
+  </body>
+</html>

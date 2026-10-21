@@ -1,0 +1,23 @@
+{
+  "name": "code-action-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "check": "tsc --noEmit",
+    "clean": "bash scripts/clean-appledouble.sh",
+    "build": "npm run clean && npm run check && vite build",
+    "app:dev": "bash scripts/tauri.sh dev",
+    "app:build": "bash scripts/tauri.sh build",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "typescript": "^5.9",
+    "vite": "^7"
+  }
+}
