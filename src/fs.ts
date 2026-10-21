@@ -19,12 +19,16 @@ export class FileSearch extends SearchPlugin {
 
   async search(word = ""): Promise<ListItem[]> {
     this.remember(word);
-    if (!word.trim()) return [];
+    // 以 - 开头的词视为 fs locate 选项，须放在 `--` 之前，否则会被当作搜索表达式。
+    const tokens = word.split(/\s+/).filter(Boolean);
+    const flags = tokens.filter((t) => t.startsWith("-"));
+    const expr = tokens.filter((t) => !t.startsWith("-")).join(" ");
+    if (!expr) return [];
 
     try {
       // 直接传参，保留表达式中的引号、通配符和特殊字符，不经 shell。
       const { stdout } = await locate(binary,
-        ["locate", "--json", "-n", "200", "--", word], {
+        ["locate", "--json", "-n", "200", ...flags, "--", expr], {
           encoding: "utf8",
           timeout: 3000,
           maxBuffer: 10 * 1024 * 1024,
