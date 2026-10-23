@@ -1,7 +1,7 @@
 {
   "name": "830ef6d0",
   "pluginName": "VSCode History Actions",
-  "description": "快速搜索 vscode 历史项目及 fs 全部文件索引。右键可用终端、文件管理器、VSCode、VSCode Insider 打开。macOS 用登录 shell 调 code，终端留空打开 Terminal.app。",
+  "description": "快速搜索 vscode 历史项目及 fs 全部文件索引。右键可用终端、文件管理器、VSCode 打开。macOS 用登录 shell 调 code，终端留空打开 Terminal.app。",
   "version": "v3.5.0",
   "preload": "dist/preload.js",
   "author": "莫回首, kongdd",

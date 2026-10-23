@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import "./style.css";
 
 type Mode = "vscode" | "zed" | "fs";
-type Action = "default" | "vscode" | "insiders" | "zed" | "directory" | "terminal";
+type Action = "default" | "vscode" | "zed" | "directory" | "terminal";
 interface Item { title: string; path: string; remote: boolean }
 interface Shortcut {
   id: string;
@@ -16,7 +16,6 @@ interface Settings {
   database: string;
   fsBinary: string;
   code: string;
-  insiders: string;
   zed: string;
   terminal: string;
   shortcuts: Shortcut[];
@@ -291,7 +290,6 @@ function context(event: MouseEvent, item: Item) {
   menu.replaceChildren();
   const actions: [string, () => void][] = [
     ["用 VSCode 打开", () => void open(item, "vscode")],
-    ["用 VSCode Insiders 打开", () => void open(item, "insiders")],
   ];
   if (!item.remote) actions.push(
     ["用 Zed 打开", () => void open(item, "zed")],

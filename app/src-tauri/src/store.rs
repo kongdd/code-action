@@ -34,7 +34,6 @@ pub struct Settings {
     pub database: String,
     pub fs_binary: String,
     pub code: String,
-    pub insiders: String,
     pub zed: String,
     pub terminal: String,
     pub shortcuts: Vec<Shortcut>,
@@ -56,7 +55,6 @@ impl Default for Settings {
             database: String::new(),
             fs_binary: if binary.is_file() { binary.to_string_lossy().into() } else { "fs".into() },
             code: "code".into(),
-            insiders: "code-insiders".into(),
             zed: "zed".into(),
             terminal: String::new(),
             shortcuts: vec![

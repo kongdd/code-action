@@ -5,7 +5,7 @@ use tokio::process::Command;
 
 #[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum Action { Default, Vscode, Insiders, Zed, Directory, Terminal }
+pub enum Action { Default, Vscode, Zed, Directory, Terminal }
 
 #[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -21,17 +21,13 @@ fn executable(binary: &str) -> PathBuf {
     if let Some(home) = dirs::home_dir() {
         paths.extend([home.join(".cargo/bin"), home.join(".local/bin")]);
         #[cfg(target_os = "macos")]
-        paths.extend([
-            home.join("Applications/Visual Studio Code.app/Contents/Resources/app/bin"),
-            home.join("Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin"),
-        ]);
+        paths.push(home.join("Applications/Visual Studio Code.app/Contents/Resources/app/bin"));
     }
     #[cfg(target_os = "macos")]
     paths.extend([
         PathBuf::from("/opt/homebrew/bin"),
         PathBuf::from("/usr/local/bin"),
         PathBuf::from("/Applications/Visual Studio Code.app/Contents/Resources/app/bin"),
-        PathBuf::from("/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin"),
     ]);
     paths.into_iter().map(|p| p.join(binary)).find(|p| p.is_file()).unwrap_or(path)
 }
@@ -93,7 +89,6 @@ fn editor(binary: &str, target: &str) -> Command {
     if !remote {
         let app = match binary {
             "code" => Some("Visual Studio Code"),
-            "code-insiders" => Some("Visual Studio Code - Insiders"),
             "zed" => Some("Zed"),
             _ => None,
         };
@@ -202,7 +197,6 @@ pub async fn open(settings: &Settings, action: Action, mode: Mode, target: &str)
     };
     let mut cmd = match action {
         Action::Vscode => editor(&settings.code, target),
-        Action::Insiders => editor(&settings.insiders, target),
         Action::Zed => editor(&settings.zed, target),
         Action::Default => open_path(target),
         Action::Directory | Action::Terminal => {

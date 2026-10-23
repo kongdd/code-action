@@ -47,8 +47,8 @@ export function editorCmd(bin: string, target: string, shell = "", platform = pr
   const arg = quoteArg(target, platform);
   const remote = /vscode-remote:/i.test(target);
   // macOS 本地项目通过 LaunchServices 打开，不依赖命令的 PATH。
-  if (platform === "darwin" && !remote && !target.startsWith("-") && ["code", "code-insiders", "zed"].includes(bin)) {
-    const app = bin === "zed" ? "Zed" : bin === "code" ? "Visual Studio Code" : "Visual Studio Code - Insiders";
+  if (platform === "darwin" && !remote && !target.startsWith("-") && ["code", "zed"].includes(bin)) {
+    const app = bin === "zed" ? "Zed" : "Visual Studio Code";
     return `/usr/bin/open -a ${quoteArg(app, platform)} -- ${arg}`;
   }
   const flag = target.includes(".code-workspace") ? "--file-uri" : "--folder-uri";

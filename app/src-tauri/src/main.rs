@@ -110,7 +110,7 @@ fn load_store(state: State<'_, AppState>) -> Result<Store, String> {
 
 #[tauri::command]
 fn save_settings(settings: Settings, state: State<'_, AppState>) -> Result<(), String> {
-    if [&settings.code, &settings.insiders, &settings.zed, &settings.fs_binary]
+    if [&settings.code, &settings.zed, &settings.fs_binary]
         .iter().any(|value| value.trim().is_empty()) {
         return Err("可执行文件不能为空".into());
     }

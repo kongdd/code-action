@@ -35,8 +35,6 @@ const { editorCmd, quoteArg } = require("../src/plugin.ts");
 const target = "/tmp/中文 project's $HOME";
 assert.equal(editorCmd("code", target, "zsh -l -c", "darwin"),
   `/usr/bin/open -a 'Visual Studio Code' -- ${quoteArg(target, "darwin")}`);
-assert.equal(editorCmd("code-insiders", target, "", "darwin"),
-  `/usr/bin/open -a 'Visual Studio Code - Insiders' -- ${quoteArg(target, "darwin")}`);
 assert.equal(editorCmd("zed", target, "zsh -l -c", "darwin"),
   `/usr/bin/open -a 'Zed' -- ${quoteArg(target, "darwin")}`);
 assert.equal(editorCmd("/custom/code", "/tmp/project", "", "darwin"),

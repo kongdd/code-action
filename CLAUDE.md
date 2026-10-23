@@ -10,7 +10,7 @@ This is a uTools plugin that provides VSCode history search and Everything file 
 - `vsc_action`: Search VSCode recently opened projects/workspaces
 - `es`: Everything file search integration
 - `vsc-setting`: Configuration interface for the plugin
-- Right-click context menu for multiple opening methods (Terminal, Directory, VSCode, VSCode Insider)
+- Right-click context menu for multiple opening methods (Terminal, Directory, VSCode, Zed)
 
 ## Build Commands
 
@@ -65,7 +65,7 @@ Each plugin implements the `Plugin` interface with:
   - `wt.exe -d`: Open in Windows Terminal
   - `explorer.exe`: Open in File Explorer
   - `code.exe`: Open in VSCode
-  - `code-insiders.cmd`: Open in VSCode Insider
+  - `zed`: Open in Zed
   - Copy Linux Path (converts backslashes to forward slashes)
 
 **src/config.ts** - Configuration schema

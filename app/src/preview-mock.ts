@@ -21,7 +21,6 @@ mockIPC((cmd) => {
       database: "",
       fsBinary: "/Users/kongdd/.cargo/bin/fs",
       code: "code",
-      insiders: "code-insiders",
       zed: "zed",
       terminal: "",
       shortcuts: [
