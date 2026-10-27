@@ -214,6 +214,9 @@ fn main() {
             hide_window,
         ])
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
             let config = app.path().app_config_dir()?.join("config.json");
             let storage = Storage::load(config).map_err(std::io::Error::other)?;
             app.manage(Mutex::new(storage));
