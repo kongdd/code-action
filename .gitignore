@@ -17,7 +17,7 @@ node_modules
 !app/package-lock.json
 !app/src-tauri/Cargo.lock
 !app/src-tauri/icons/*.png
-!app/public/icons/*.svg
+!icon/*.svg
 
 # 仅保留 README 引用的截图。
 images/*

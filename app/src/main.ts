@@ -117,18 +117,16 @@ function active(scroll = false) {
   }
 }
 
-// 图标与 uTools 保持一致：按扩展名匹配 public/icons 下的同名资源。
-const ICONS = ["c", "cpp", "cs", "css", "doc", "docx", "file", "folder", "go", "html",
-  "java", "js", "json", "md", "pdf", "php", "pptx", "py", "remote", "sh", "ts",
-  "vscode", "vue", "xml", "yaml"];
+// 桌面版与 uTools 共用仓库根目录的图标，Vite 负责打包资源。
+const ICONS = import.meta.glob<string>("../../icon/*.svg", { eager: true, query: "?url", import: "default" });
 
 function iconFor(item: Item): string {
-  if (item.remote) return "/icons/remote.svg";
+  if (item.remote) return ICONS["../../icon/remote.svg"];
   const name = item.path.split("/").pop() || "";
   const dot = name.lastIndexOf(".");
   const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : "";
-  if (!ext) return "/icons/folder.svg";
-  return `/icons/${ICONS.includes(ext) ? ext : "file"}.svg`;
+  if (!ext) return ICONS["../../icon/folder.svg"];
+  return ICONS[`../../icon/${ext}.svg`] || ICONS["../../icon/file.svg"];
 }
 
 /// fs 模式下把查询词还原为可高亮的片段，去掉 path: 等前缀与通配符。
