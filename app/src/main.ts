@@ -263,6 +263,15 @@ async function pin(item: Item) {
   } catch (error) { report(error); }
 }
 
+async function removeHistory(item: Item) {
+  try {
+    await invoke("remove_history", { path: item.path });
+    store.preferences.favorites = store.preferences.favorites.filter((path) => path !== item.path);
+    await persist();
+    schedule(0);
+  } catch (error) { report(error); }
+}
+
 async function open(item: Item | undefined, action: Action = "default") {
   if (!item || opening) return;
   opening = true;
@@ -299,6 +308,7 @@ function context(event: MouseEvent, item: Item) {
     ["复制路径", () => { void invoke("copy_text", { text: item.path }).catch(report); }],
     ["复制 Linux 路径", () => { void invoke("copy_text", { text: item.path.replaceAll("\\", "/") }).catch(report); }],
   );
+  if (mode !== "fs") actions.push(["从历史记录移除", () => void removeHistory(item)]);
   for (const [label, action] of actions) {
     const button = document.createElement("button");
     button.type = "button";

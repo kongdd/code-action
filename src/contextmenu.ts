@@ -3,13 +3,16 @@ import { statSync } from 'fs';
 import { dirname } from 'path';
 import { Setting } from 'utools-helper';
 import { check_path, editorCmd, quoteArg } from './plugin';
+import { activeSearch } from './search';
+import { RemoveHistory } from './files';
 
 const MENU_ACTIONS = {
     TERMINAL: 'terminal',
     EXPLORER: 'explorer',
     VSCODE: 'vscode',
     ZED: 'zed',
-    COPY_LINUX_PATH: 'copy_path_linux'
+    COPY_LINUX_PATH: 'copy_path_linux',
+    REMOVE_HISTORY: 'remove_history'
 } as const;
 
 function openTerminal(dir: string) {
@@ -78,6 +81,7 @@ function setupContextMenu() {
     <div data-action="${MENU_ACTIONS.VSCODE}">Open in VSCode</div>
     <div data-action="${MENU_ACTIONS.ZED}">Open in Zed</div>
     <div data-action="${MENU_ACTIONS.COPY_LINUX_PATH}">Copy Linux Path</div>
+    <div data-action="${MENU_ACTIONS.REMOVE_HISTORY}">Remove from history</div>
   `;
     document.body.appendChild(menu);
 
@@ -97,7 +101,8 @@ function setupContextMenu() {
 
 function onContextmenu(e: MouseEvent) {
     const target = e.target as HTMLElement;
-    const descElement = target.closest(".list-item")?.querySelector(".list-item-description") as HTMLElement;
+    const listItem = target.closest<HTMLElement>(".list-item");
+    const descElement = listItem?.querySelector(".list-item-description") as HTMLElement;
 
     if (!descElement) return;
 
@@ -117,17 +122,23 @@ function onContextmenu(e: MouseEvent) {
         const action = menuItem.getAttribute('data-action');
         const htmlItem = menuItem as HTMLElement;
 
-        // Remote 项目只显示 VSCode 相关操作
-        if (isRemote) {
-            const allowedActions = [MENU_ACTIONS.VSCODE, MENU_ACTIONS.COPY_LINUX_PATH];
-            htmlItem.style.display = allowedActions.includes(action as any) ? 'block' : 'none';
-        } else {
-            htmlItem.style.display = 'block';
-        }
+        const isHistory = activeSearch === 'vsc_action' || activeSearch === 'zed_action';
+        const allowedRemote = [MENU_ACTIONS.VSCODE, MENU_ACTIONS.COPY_LINUX_PATH, MENU_ACTIONS.REMOVE_HISTORY];
+        htmlItem.style.display = (action !== MENU_ACTIONS.REMOVE_HISTORY || isHistory)
+            && (!isRemote || allowedRemote.includes(action as any)) ? 'block' : 'none';
 
-        htmlItem.onclick = () => {
-            handleContextAction(action!, path);
+        htmlItem.onclick = async () => {
             hideMenu(menu);
+            if (action !== MENU_ACTIONS.REMOVE_HISTORY) return handleContextAction(action!, path);
+            try {
+                await RemoveHistory(Setting.Get('db'), path);
+                const collects = utools.dbStorage.getItem('collect') || [];
+                utools.dbStorage.setItem('collect', collects.filter((item: any) => item.description !== path));
+                if (listItem) listItem.style.display = 'none';
+            } catch (error) {
+                const message = error.code === 'ENOENT' ? '请安装 sqlite3 并加入 PATH' : error.message;
+                utools.showNotification(`移除历史失败：${message}`);
+            }
         };
     });
 }

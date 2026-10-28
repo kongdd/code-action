@@ -102,6 +102,28 @@ fn query_history(path: &Path) -> Result<Vec<String>, String> {
     Ok(entries.iter().filter_map(entry_path).collect())
 }
 
+pub fn remove(settings: &Settings, target: &str) -> Result<(), String> {
+    let path = database_candidates(settings)?.into_iter()
+        .find(|path| read_database(path).is_ok())
+        .ok_or("无法读取 VSCode 历史数据库")?;
+    let mut db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_WRITE)
+        .map_err(|e| e.to_string())?;
+    db.busy_timeout(Duration::from_millis(3000)).map_err(|e| e.to_string())?;
+    let tx = db.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(|e| e.to_string())?;
+    let value: String = tx.query_row(
+        "SELECT value FROM ItemTable WHERE key = ?1", [HISTORY_KEY], |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+    let mut data: Value = serde_json::from_str(&value).map_err(|e| e.to_string())?;
+    let entries = data.get_mut("entries").and_then(Value::as_array_mut).ok_or("历史记录格式不正确")?;
+    entries.retain(|entry| entry_path(entry).as_deref() != Some(target));
+    tx.execute("UPDATE ItemTable SET value = ?1 WHERE key = ?2", [&data.to_string(), HISTORY_KEY])
+        .map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())?;
+    if let Ok(mut cache) = CACHE.lock() { *cache = None; }
+    Ok(())
+}
+
 pub fn recent(settings: &Settings, favorites: &[String], query: &str) -> Result<Vec<Item>, String> {
     let mut errors = Vec::new();
     let mut paths = None;
@@ -176,6 +198,22 @@ mod tests {
         writer.execute("INSERT INTO ItemTable VALUES (?1, ?2)", [HISTORY_KEY, value]).unwrap();
         assert!(path.with_extension("vscdb-wal").exists());
         assert_eq!(read_database(&path).unwrap(), ["vscode-remote://host/new-project"]);
+    }
+
+    #[test]
+    fn removes_history_from_live_wal_and_invalidates_cache() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("state.vscdb");
+        let db = Connection::open(&path).unwrap();
+        db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE ItemTable (key TEXT PRIMARY KEY, value TEXT);").unwrap();
+        let value = r#"{"entries":[{"fileUri":"file:///tmp/a%20b"},{"folderUri":"vscode-remote://host/keep"}],"extra":1}"#;
+        db.execute("INSERT INTO ItemTable VALUES (?1, ?2)", [HISTORY_KEY, value]).unwrap();
+        assert_eq!(read_database(&path).unwrap().len(), 2);
+        let settings = Settings { database: path.to_string_lossy().into_owned(), ..Settings::default() };
+        remove(&settings, "/tmp/a b").unwrap();
+        assert_eq!(read_database(&path).unwrap(), ["vscode-remote://host/keep"]);
+        let value: String = db.query_row("SELECT value FROM ItemTable WHERE key = ?1", [HISTORY_KEY], |row| row.get(0)).unwrap();
+        assert_eq!(serde_json::from_str::<Value>(&value).unwrap()["extra"], 1);
     }
 
     #[test]

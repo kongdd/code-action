@@ -186,6 +186,13 @@ async fn search(
 }
 
 #[tauri::command]
+async fn remove_history(path: String, state: State<'_, AppState>) -> Result<(), String> {
+    let settings = state.lock().map_err(|e| e.to_string())?.data.settings.clone();
+    tauri::async_runtime::spawn_blocking(move || history::remove(&settings, &path))
+        .await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 async fn open_item(action: Action, mode: Mode, path: String, state: State<'_, AppState>) -> Result<(), String> {
     let settings = state.lock().map_err(|e| e.to_string())?.data.settings.clone();
     actions::open(&settings, action, mode, &path).await
@@ -210,7 +217,7 @@ fn main() {
         }))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
-            load_store, save_settings, save_preferences, save_shortcuts, search, open_item, copy_text,
+            load_store, save_settings, save_preferences, save_shortcuts, search, open_item, copy_text, remove_history,
             hide_window,
         ])
         .setup(|app| {

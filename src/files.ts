@@ -2,6 +2,9 @@ import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import { Database } from "sql.js";
+import { execFile } from "child_process";
+import { promisify } from "util";
+import { check_path } from "./plugin";
 // 为了减少文件大小，从最新的"sql.js" copy出来
 const initSqlJs = require("../third_party/sqljs/sql-wasm");
 
@@ -72,7 +75,11 @@ function readDbBuffer(dbPath: string): Buffer {
   return Buffer.from(merged.subarray(0, committedPageCount * pageSize));
 }
 
-export async function GetFiles(dbPath: string): Promise<string[]> {
+function entryPath(file: Entry | string): string {
+  return typeof file === "string" ? file : file.fileUri || file.folderUri || file.workspace?.configPath || "";
+}
+
+async function readHistory(dbPath: string): Promise<{ path: string; value: string; data: Recent }> {
   const SQL = await initSqlJs();
 
   // VSCode 1.118+: 优先使用 shared storage 路径，旧路径作为 fallback
@@ -90,11 +97,8 @@ export async function GetFiles(dbPath: string): Promise<string[]> {
       const results = db.exec(`select value from ItemTable where key = '${STORAGE_KEY}'`);
       const value = results?.[0]?.values?.[0]?.[0];
       if (!value) throw new Error("未找到历史记录数据");
-      const data = JSON.parse(value.toString()) as Recent;
-      return data.entries.map(file => {
-        if (typeof file === "string") return file;
-        return file.fileUri || file.folderUri || file.workspace?.configPath || "";
-      });
+      const json = value.toString();
+      return { path, value: json, data: JSON.parse(json) as Recent };
     } catch (e) {
       lastError = e as Error;
     } finally {
@@ -103,5 +107,22 @@ export async function GetFiles(dbPath: string): Promise<string[]> {
   }
 
   throw new Error(`${lastError.message}。请检查 vsc-setting 配置；VS Code 1.118+ 需要使用 .vscode-shared/sharedStorage/state.vscdb`);
+}
+
+export async function GetFiles(dbPath: string): Promise<string[]> {
+  const { data } = await readHistory(dbPath);
+  return data.entries.map(entryPath);
+}
+
+export async function RemoveHistory(dbPath: string, target: string): Promise<void> {
+  const { path, value, data } = await readHistory(dbPath);
+  const entries = data.entries.filter(entry => check_path(decodeURIComponent(entryPath(entry))) !== target);
+  if (entries.length === data.entries.length) return;
+  const quote = (text: string) => `'${text.replace(/'/g, "''")}'`;
+  const updated = JSON.stringify({ ...data, entries });
+  // 获取 SQLite 写锁并校验原始值，避免覆盖并发修改。
+  const sql = `BEGIN IMMEDIATE; UPDATE ItemTable SET value = ${quote(updated)} WHERE key = ${quote(STORAGE_KEY)} AND value = ${quote(value)}; SELECT changes(); COMMIT;`;
+  const { stdout } = await promisify(execFile)("sqlite3", ["-cmd", ".timeout 3000", path, sql]);
+  if (stdout.trim() !== "1") throw new Error("历史记录已变更，请重试");
 }
 

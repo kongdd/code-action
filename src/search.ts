@@ -1,5 +1,7 @@
 import { ListItem, Plugin } from "utools-helper";
 
+export let activeSearch = "";
+
 export abstract class SearchPlugin implements Plugin {
   abstract code: string;
   abstract search(word: string): Promise<ListItem[]>;
@@ -9,6 +11,7 @@ export abstract class SearchPlugin implements Plugin {
   }
 
   protected remember(word: string) {
+    activeSearch = this.code;
     utools.dbStorage.setItem(`search:${this.code}`, word);
   }
 
