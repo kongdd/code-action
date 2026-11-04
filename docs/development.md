@@ -58,8 +58,8 @@ macOS 在 NFS 挂载盘上生成的 `._*` AppleDouble 旁路文件可能破坏 T
 
 ### 历史项目与文件搜索
 
-- 最近项目读取 VSCode 的 `state.vscdb`，支持 WAL 实时数据；Zed 模式使用同一项目列表，只改变打开方式。
-- “VSCode 数据库”留空时，自动依次尝试 `~/.vscode-shared/sharedStorage/state.vscdb`（VSCode 1.118+）与平台默认位置；macOS 的传统位置为 `~/Library/Application Support/Code/User/globalStorage/state.vscdb`。
+- 最近项目读取 VSCode 的 `state.vscdb`，合并 `recently.opened` 与 `history.recentlyOpenedPathsList`，支持 WAL 实时数据；Zed 模式使用同一项目列表，只改变打开方式。
+- “VSCode 数据库”留空时，自动合并 `~/.vscode-shared/sharedStorage/state.vscdb`（VSCode 1.118+）与平台默认位置的记录并去重；macOS 的传统位置为 `~/Library/Application Support/Code/User/globalStorage/state.vscdb`。指定路径时只读取该数据库。
 - 文件搜索调用本机 [fs](https://github.com/kongdd/fs) 索引。需先安装并建立索引，文件变化后运行 `fs updatedb`。
 - 搜索表达式支持 `soil rain`、`*.pdf`、`Kong exts:docx,pdf`、`path:papers Kong`，最多显示 200 条结果。
 - 打不开项目时，在设置中填写编辑器可执行文件路径；macOS 会自动查找应用包内 CLI。

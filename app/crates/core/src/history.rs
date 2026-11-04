@@ -1,11 +1,12 @@
 use crate::store::Settings;
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::{Connection, OpenFlags, OptionalExtension};
 use serde::Serialize;
 use serde_json::Value;
-use std::{collections::HashSet, path::{Path, PathBuf}, sync::Mutex, time::Duration};
+use std::{collections::{BTreeMap, HashSet}, path::{Path, PathBuf}, sync::Mutex, time::Duration};
 use url::Url;
 
 const HISTORY_KEY: &str = "history.recentlyOpenedPathsList";
+const HISTORY_KEYS: [&str; 2] = ["recently.opened", HISTORY_KEY];
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Item {
@@ -56,7 +57,7 @@ pub fn database_candidates(settings: &Settings) -> Result<Vec<PathBuf>, String> 
 type Stamp = ((std::time::SystemTime, u64), Option<(std::time::SystemTime, u64)>);
 
 /// 解析结果缓存。VSCode 每次打开项目都会重写数据库，按 Stamp 复用可省掉每次键入的读盘。
-static CACHE: Mutex<Option<(PathBuf, Stamp, Vec<String>)>> = Mutex::new(None);
+static CACHE: Mutex<BTreeMap<PathBuf, (Stamp, Vec<String>)>> = Mutex::new(BTreeMap::new());
 
 fn file_stamp(path: &Path) -> Result<Option<(std::time::SystemTime, u64)>, String> {
     match std::fs::metadata(path) {
@@ -77,13 +78,13 @@ fn stamp(path: &Path) -> Result<Stamp, String> {
 fn read_database(path: &Path) -> Result<Vec<String>, String> {
     let current = stamp(path)?;
     if let Ok(cache) = CACHE.lock() {
-        if let Some((cached, known, entries)) = cache.as_ref() {
-            if cached == path && *known == current { return Ok(entries.clone()); }
+        if let Some((known, entries)) = cache.get(path) {
+            if *known == current { return Ok(entries.clone()); }
         }
     }
     let entries = query_history(path)?;
     if let Ok(mut cache) = CACHE.lock() {
-        *cache = Some((path.to_path_buf(), current, entries.clone()));
+        cache.insert(path.to_path_buf(), (current, entries.clone()));
     }
     Ok(entries)
 }
@@ -93,47 +94,84 @@ fn query_history(path: &Path) -> Result<Vec<String>, String> {
     let db = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .map_err(|e| e.to_string())?;
     db.busy_timeout(Duration::from_millis(500)).map_err(|e| e.to_string())?;
-    let value: String = db.query_row(
-        "SELECT value FROM ItemTable WHERE key = ?1",
-        [HISTORY_KEY], |row| row.get(0),
-    ).map_err(|e| e.to_string())?;
-    let data: Value = serde_json::from_str(&value).map_err(|e| e.to_string())?;
-    let entries = data.get("entries").and_then(Value::as_array).ok_or("历史记录格式不正确")?;
-    Ok(entries.iter().filter_map(entry_path).collect())
+    let mut paths = Vec::new();
+    for (_, data) in history_data(&db)? {
+        paths.extend(data["entries"].as_array().unwrap().iter().filter_map(entry_path));
+    }
+    Ok(paths)
+}
+
+fn history_data(db: &Connection) -> Result<Vec<(&'static str, Value)>, String> {
+    let mut histories = Vec::new();
+    // 不同版本/作用域使用不同键，不能因旧键存在就跳过当前记录。
+    for key in HISTORY_KEYS {
+        let value: Option<String> = db.query_row(
+            "SELECT value FROM ItemTable WHERE key = ?1", [key], |row| row.get(0),
+        ).optional().map_err(|e| e.to_string())?;
+        let Some(value) = value else { continue; };
+        let data: Value = serde_json::from_str(&value).map_err(|e| e.to_string())?;
+        if !data.get("entries").is_some_and(Value::is_array) {
+            return Err("历史记录格式不正确".into());
+        }
+        histories.push((key, data));
+    }
+    if histories.is_empty() { return Err("未找到历史记录数据".into()); }
+    Ok(histories)
+}
+
+fn read_histories(candidates: &[PathBuf]) -> Result<Vec<(PathBuf, Vec<String>)>, String> {
+    let mut histories = Vec::new();
+    let mut errors = Vec::new();
+    for path in candidates {
+        match read_database(path) {
+            Ok(entries) => histories.push((path.clone(), entries)),
+            Err(error) => errors.push(format!("{}: {error}", path.display())),
+        }
+    }
+    if histories.is_empty() {
+        return Err(format!("无法读取 VSCode 历史，请在设置中检查数据库路径。\n{}", errors.join("\n")));
+    }
+    Ok(histories)
 }
 
 pub fn remove(settings: &Settings, target: &str) -> Result<(), String> {
-    let path = database_candidates(settings)?.into_iter()
-        .find(|path| read_database(path).is_ok())
-        .ok_or("无法读取 VSCode 历史数据库")?;
-    let mut db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_WRITE)
+    remove_from_databases(&database_candidates(settings)?, target)
+}
+
+fn remove_from_databases(candidates: &[PathBuf], target: &str) -> Result<(), String> {
+    // 合并展示后，删除也必须覆盖所有来源，避免记录从另一数据库重新出现。
+    for (path, entries) in read_histories(candidates)? {
+        if entries.iter().any(|entry| entry == target) {
+            remove_from_database(&path, target)?;
+        }
+    }
+    Ok(())
+}
+
+fn remove_from_database(path: &Path, target: &str) -> Result<(), String> {
+    let mut db = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_WRITE)
         .map_err(|e| e.to_string())?;
     db.busy_timeout(Duration::from_millis(3000)).map_err(|e| e.to_string())?;
     let tx = db.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(|e| e.to_string())?;
-    let value: String = tx.query_row(
-        "SELECT value FROM ItemTable WHERE key = ?1", [HISTORY_KEY], |row| row.get(0),
-    ).map_err(|e| e.to_string())?;
-    let mut data: Value = serde_json::from_str(&value).map_err(|e| e.to_string())?;
-    let entries = data.get_mut("entries").and_then(Value::as_array_mut).ok_or("历史记录格式不正确")?;
-    entries.retain(|entry| entry_path(entry).as_deref() != Some(target));
-    tx.execute("UPDATE ItemTable SET value = ?1 WHERE key = ?2", [&data.to_string(), HISTORY_KEY])
-        .map_err(|e| e.to_string())?;
+    for (key, mut data) in history_data(&tx)? {
+        let entries = data["entries"].as_array_mut().unwrap();
+        let count = entries.len();
+        entries.retain(|entry| entry_path(entry).as_deref() != Some(target));
+        if entries.len() != count {
+            tx.execute("UPDATE ItemTable SET value = ?1 WHERE key = ?2", [&data.to_string(), key])
+                .map_err(|e| e.to_string())?;
+        }
+    }
     tx.commit().map_err(|e| e.to_string())?;
-    if let Ok(mut cache) = CACHE.lock() { *cache = None; }
+    if let Ok(mut cache) = CACHE.lock() { cache.remove(path); }
     Ok(())
 }
 
 pub fn recent(settings: &Settings, favorites: &[String], query: &str) -> Result<Vec<Item>, String> {
-    let mut errors = Vec::new();
-    let mut paths = None;
-    for candidate in database_candidates(settings)? {
-        match read_database(&candidate) {
-            Ok(entries) => { paths = Some(entries); break; }
-            Err(error) => errors.push(format!("{}: {error}", candidate.display())),
-        }
-    }
-    let paths = paths.ok_or_else(|| format!("无法读取 VSCode 历史，请在设置中检查数据库路径。\n{}", errors.join("\n")))?;
+    // shared storage 与旧库可能各保留部分记录，合并后统一过滤、去重。
+    let histories = read_histories(&database_candidates(settings)?)?;
+    let paths = histories.into_iter().flat_map(|(_, entries)| entries);
     Ok(filter_paths(favorites.iter().cloned().chain(paths), query))
 }
 
@@ -218,6 +256,64 @@ mod tests {
         assert!(merge_favorites(Vec::new(), &favorites, "rain").is_empty());
         let merged = merge_favorites(Vec::new(), &favorites, "SOIL");
         assert_eq!(merged[0].path, "/a/soil");
+    }
+
+    fn create_history(path: &Path, key: &str, paths: &[&str]) -> Connection {
+        let db = Connection::open(path).unwrap();
+        db.execute_batch("CREATE TABLE IF NOT EXISTS ItemTable (key TEXT PRIMARY KEY, value TEXT);").unwrap();
+        let value = serde_json::json!({"entries": paths.iter()
+            .map(|path| serde_json::json!({"folderUri": path})).collect::<Vec<_>>(), "extra": 1}).to_string();
+        db.execute("INSERT INTO ItemTable VALUES (?1, ?2)", [key, &value]).unwrap();
+        db
+    }
+
+    #[test]
+    fn reads_current_history_key_without_legacy_key() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("state.vscdb");
+        let remote = "vscode-remote://ssh-remote+host/today";
+        let _db = create_history(&path, "recently.opened", &[remote]);
+        let settings = Settings { database: path.to_string_lossy().into_owned(), ..Settings::default() };
+        let items = recent(&settings, &[], "today").unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].path, remote);
+        assert!(items[0].remote);
+    }
+
+    #[test]
+    fn merges_databases_and_keys_and_removes_from_every_source() {
+        let dir = tempfile::tempdir().unwrap();
+        let shared = dir.path().join("shared.vscdb");
+        let local = dir.path().join("local.vscdb");
+        let duplicate = "vscode-remote://host/duplicate";
+        let today = "vscode-remote://host/today";
+        let shared_db = create_history(&shared, HISTORY_KEY, &[duplicate]);
+        let local_db = create_history(&local, "recently.opened", &[today, duplicate]);
+        create_history(&local, HISTORY_KEY, &[duplicate]);
+        let candidates = vec![dir.path().join("missing.vscdb"), shared, local];
+        let paths = read_histories(&candidates).unwrap().into_iter().flat_map(|(_, entries)| entries);
+        let items = filter_paths(paths, "");
+        assert_eq!(items.iter().map(|item| item.path.as_str()).collect::<Vec<_>>(), [duplicate, today]);
+        remove_from_databases(&candidates, duplicate).unwrap();
+        assert!(read_database(&candidates[1]).unwrap().is_empty());
+        assert_eq!(read_database(&candidates[2]).unwrap(), [today]);
+        for db in [shared_db, local_db] {
+            for (_, data) in history_data(&db).unwrap() { assert_eq!(data["extra"], 1); }
+        }
+    }
+
+    #[test]
+    fn empty_shared_history_does_not_hide_local_remote_history() {
+        let dir = tempfile::tempdir().unwrap();
+        let shared = dir.path().join("shared.vscdb");
+        let local = dir.path().join("local.vscdb");
+        let remote = "vscode-remote://host/today";
+        create_history(&shared, HISTORY_KEY, &[]);
+        create_history(&local, "recently.opened", &[remote]);
+        let paths: Vec<_> = read_histories(&[shared, local]).unwrap().into_iter()
+            .flat_map(|(_, entries)| entries).collect();
+        assert_eq!(paths, [remote]);
+        assert!(read_histories(&[dir.path().join("missing.vscdb")]).is_err());
     }
 
     #[test]
