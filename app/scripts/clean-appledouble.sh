@@ -4,5 +4,6 @@
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
-find . -name '._*' -not -path './node_modules/*' -not -path './src-tauri/target/*' -delete
-xattr -cr . 2>/dev/null || true
+find . \( -path './node_modules' -o -path './target' -o -path './src-tauri/target' \) -prune -o -name '._*' -exec rm -f {} +
+# 不递归清理 node_modules：部分网络挂载通过扩展属性保存符号链接。
+find src-tauri/capabilities -type f -exec xattr -c {} + 2>/dev/null || true

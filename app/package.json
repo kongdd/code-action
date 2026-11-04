@@ -10,7 +10,8 @@
     "build": "npm run clean && npm run check && vite build",
     "app:dev": "bash scripts/tauri.sh dev",
     "app:build": "bash scripts/tauri.sh build",
-    "test": "cargo test --manifest-path src-tauri/Cargo.toml"
+    "cli:build": "cargo build -p code-action-cli --release",
+    "test": "cargo test --workspace"
   },
   "dependencies": {
     "@tauri-apps/api": "^2"

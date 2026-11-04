@@ -476,15 +476,35 @@ dependencies = [
 name = "code-action"
 version = "0.1.0"
 dependencies = [
- "dirs 6.0.0",
+ "code-action-core",
  "objc2",
- "rusqlite",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-global-shortcut",
  "tauri-plugin-single-instance",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "code-action-cli"
+version = "0.1.0"
+dependencies = [
+ "code-action-core",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "code-action-core"
+version = "0.1.0"
+dependencies = [
+ "dirs 6.0.0",
+ "rusqlite",
+ "serde",
+ "serde_json",
  "tempfile",
  "tokio",
  "url",

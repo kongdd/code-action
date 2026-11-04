@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import fileIcon from "../../icon/file.svg?url";
+import folderIcon from "../../icon/folder.svg?url";
+import remoteIcon from "../../icon/remote.svg?url";
 import "./style.css";
 
 type Mode = "vscode" | "zed" | "fs";
@@ -121,12 +124,12 @@ function active(scroll = false) {
 const ICONS = import.meta.glob<string>("../../icon/*.svg", { eager: true, query: "?url", import: "default" });
 
 function iconFor(item: Item): string {
-  if (item.remote) return ICONS["../../icon/remote.svg"];
+  if (item.remote) return remoteIcon;
   const name = item.path.split("/").pop() || "";
   const dot = name.lastIndexOf(".");
   const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : "";
-  if (!ext) return ICONS["../../icon/folder.svg"];
-  return ICONS[`../../icon/${ext}.svg`] || ICONS["../../icon/file.svg"];
+  if (!ext) return folderIcon;
+  return ICONS[`../../icon/${ext}.svg`] || fileIcon;
 }
 
 /// fs 模式下把查询词还原为可高亮的片段，去掉 path: 等前缀与通配符。

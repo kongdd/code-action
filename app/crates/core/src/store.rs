@@ -1,6 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
+/// 应用标识，与 tauri.conf.json 的 identifier 保持一致，用于定位配置目录。
+pub const APP_ID: &str = "io.github.kongdd.code-action";
+
+/// 配置文件路径：桌面版与命令行版共用同一份配置。
+pub fn config_path() -> Option<PathBuf> {
+    Some(dirs::config_dir()?.join(APP_ID).join("config.json"))
+}
+
 /// 全局快捷键绑定：accelerator 为 global-hotkey 可解析的组合键。
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]

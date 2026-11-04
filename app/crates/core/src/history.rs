@@ -137,6 +137,17 @@ pub fn recent(settings: &Settings, favorites: &[String], query: &str) -> Result<
     Ok(filter_paths(favorites.iter().cloned().chain(paths), query))
 }
 
+/// fs 结果只来自索引，收藏项需要单独并入，否则置顶项在 fs 模式下永远不出现。
+pub fn merge_favorites(found: Vec<Item>, favorites: &[String], query: &str) -> Vec<Item> {
+    let keywords: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
+    let mut pinned: Vec<Item> = favorites.iter()
+        .filter(|path| keywords.iter().all(|word| path.to_lowercase().contains(word)))
+        .map(|path| Item::new(path.clone()))
+        .collect();
+    pinned.extend(found.into_iter().filter(|item| !favorites.contains(&item.path)));
+    pinned
+}
+
 fn filter_paths(paths: impl IntoIterator<Item = String>, query: &str) -> Vec<Item> {
     let keywords: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
     let mut seen = HashSet::new();
@@ -157,25 +168,30 @@ mod tests {
 
     #[test]
     fn file_uri_and_remote_paths() {
-        assert_eq!(normalize_path("file:///tmp/A%20B%2520"), Some("/tmp/A B%20".into()));
+        let path = std::env::temp_dir().join("A B%20");
+        let uri = Url::from_file_path(&path).unwrap().to_string();
+        assert_eq!(normalize_path(&uri), Some(path.to_string_lossy().into_owned()));
         let remote = "vscode-remote://ssh-remote+host/home/A%20B";
         assert_eq!(normalize_path(remote), Some(remote.into()));
         assert_eq!(normalize_path(""), None);
+        #[cfg(not(windows))]
         assert_eq!(normalize_path("file:///%ZZ"), Some("/%ZZ".into()));
     }
 
     #[test]
     fn entry_shapes() {
+        let path = std::env::temp_dir().join("test.code-workspace");
+        let uri = Url::from_file_path(&path).unwrap().to_string();
         let entries = serde_json::json!([
             "vscode-remote://ssh-remote+host/a",
-            {"folderUri": "file:///tmp/project"},
-            {"fileUri": "file:///tmp/file"},
-            {"workspace": {"configPath": "file:///tmp/test.code-workspace"}},
+            {"folderUri": uri},
+            {"fileUri": uri},
+            {"workspace": {"configPath": uri}},
             {}
         ]);
         let paths: Vec<_> = entries.as_array().unwrap().iter().filter_map(entry_path).collect();
         assert_eq!(paths.len(), 4);
-        assert_eq!(paths[3], "/tmp/test.code-workspace");
+        assert_eq!(paths[3], path.to_string_lossy());
     }
 
     #[test]
@@ -185,6 +201,23 @@ mod tests {
         let result = filter_paths([a.into(), a.into(), b.into(), "/nonexistent/file".into()], "soil RAIN");
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].path, a);
+    }
+
+    #[test]
+    fn favorites_lead_the_result_and_are_not_duplicated() {
+        let favorites = vec!["/a/soil".to_owned()];
+        let found = vec![Item::new("/b/rain".into()), Item::new("/a/soil".into())];
+        let merged = merge_favorites(found, &favorites, "");
+        let paths: Vec<_> = merged.iter().map(|item| item.path.as_str()).collect();
+        assert_eq!(paths, ["/a/soil", "/b/rain"]);
+    }
+
+    #[test]
+    fn favorites_obey_the_query() {
+        let favorites = vec!["/a/soil".to_owned()];
+        assert!(merge_favorites(Vec::new(), &favorites, "rain").is_empty());
+        let merged = merge_favorites(Vec::new(), &favorites, "SOIL");
+        assert_eq!(merged[0].path, "/a/soil");
     }
 
     #[test]
@@ -206,11 +239,16 @@ mod tests {
         let path = dir.path().join("state.vscdb");
         let db = Connection::open(&path).unwrap();
         db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE ItemTable (key TEXT PRIMARY KEY, value TEXT);").unwrap();
-        let value = r#"{"entries":[{"fileUri":"file:///tmp/a%20b"},{"folderUri":"vscode-remote://host/keep"}],"extra":1}"#;
-        db.execute("INSERT INTO ItemTable VALUES (?1, ?2)", [HISTORY_KEY, value]).unwrap();
+        let target = dir.path().join("a b");
+        let value = serde_json::json!({
+            "entries": [{"fileUri": Url::from_file_path(&target).unwrap().to_string()},
+                {"folderUri": "vscode-remote://host/keep"}],
+            "extra": 1,
+        }).to_string();
+        db.execute("INSERT INTO ItemTable VALUES (?1, ?2)", [HISTORY_KEY, &value]).unwrap();
         assert_eq!(read_database(&path).unwrap().len(), 2);
         let settings = Settings { database: path.to_string_lossy().into_owned(), ..Settings::default() };
-        remove(&settings, "/tmp/a b").unwrap();
+        remove(&settings, &target.to_string_lossy()).unwrap();
         assert_eq!(read_database(&path).unwrap(), ["vscode-remote://host/keep"]);
         let value: String = db.query_row("SELECT value FROM ItemTable WHERE key = ?1", [HISTORY_KEY], |row| row.get(0)).unwrap();
         assert_eq!(serde_json::from_str::<Value>(&value).unwrap()["extra"], 1);
@@ -223,8 +261,8 @@ mod tests {
         let Some(path) = candidates.into_iter().find(|path| path.exists()) else {
             return;
         };
-        let entries = read_database(&path).unwrap();
-        assert!(!entries.is_empty(), "历史记录不应为空");
+        // 用户可能清空过历史，不应要求数据库非空。
+        read_database(&path).unwrap();
     }
 
     #[test]

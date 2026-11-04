@@ -52,10 +52,16 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: app/src-tauri -> target
+          workspaces: app -> target
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Test workspace
+        run: cargo test --workspace --locked
+
+      - name: Build CLI
+        run: cargo build -p code-action-cli --release --locked
 
       - name: Compile desktop app
         run: npx tauri build --ci --no-bundle

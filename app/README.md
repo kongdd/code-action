@@ -41,4 +41,17 @@
 
 > 文件搜索需要安装 [fs](https://github.com/kongdd/fs) 并建立索引；文件变化后用 `fs updatedb` 更新。
 
+## 命令行版
+
+桌面版与命令行版共用 `crates/core`，配置也取自同一份 `config.json`。
+
+```bash
+cargo build -p code-action-cli --release   # 产物 ca 位于 Cargo 的 target/release 目录
+
+ca list [关键词…]                     # 列出 VSCode 最近打开的项目
+ca find <表达式>                      # 用 fs 检索本地文件
+ca open <路径> [--vscode|--zed|--dir|--term]
+ca rm <路径>                          # 从 VSCode 历史中移除
+```
+
 [反馈问题](https://github.com/kongdd/utools-vscode/issues) · [开发与排障](../docs/development.md) · [返回项目首页](../README.md)

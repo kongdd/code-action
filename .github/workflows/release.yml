@@ -74,7 +74,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: app/src-tauri -> target
+          workspaces: app -> target
           key: ${{ matrix.target }}
 
       - name: Install frontend dependencies
@@ -90,7 +90,7 @@ jobs:
             const parts = core.split(".").map(Number);
             const version = parts.map((part, index) => Number.isFinite(part) ? part : 0).slice(0, 3);
             while (version.length < 3) version.push(0);
-            const manifest = "src-tauri/Cargo.toml";
+            const manifest = "Cargo.toml";
             fs.writeFileSync(manifest, fs.readFileSync(manifest, "utf8")
               .replace(/^version = ".*"/m, `version = "${version.join(".")}"`));
             const config = "src-tauri/tauri.conf.json";
@@ -98,7 +98,7 @@ jobs:
             parsed.version = version.join(".");
             fs.writeFileSync(config, JSON.stringify(parsed, null, 2) + "\n");
           ' "$TAG"
-          grep -m1 '^version' src-tauri/Cargo.toml
+          grep -m1 '^version' Cargo.toml
           grep -m1 '"version"' src-tauri/tauri.conf.json
 
       - name: Build bundle
@@ -107,7 +107,7 @@ jobs:
       - name: Collect artifacts
         run: |
           mkdir -p dist-release
-          find src-tauri/target -path '*bundle*' -type f \
+          find target -path '*bundle*' -type f \
             \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' -o -name '*.deb' \) \
             -exec cp {} dist-release/ \;
           [ -n "$(ls -A dist-release)" ] || { echo "未找到构建产物"; exit 1; }

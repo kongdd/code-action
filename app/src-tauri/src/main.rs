@@ -1,13 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod actions;
-mod history;
-mod store;
-
-use actions::{Action, Mode};
+use code_action_core::{
+    actions::{self, Action, Mode},
+    history,
+    store::{config_path, Preferences, Settings, Shortcut, Storage, Store},
+};
 use serde::Serialize;
 use std::sync::Mutex;
-use store::{Preferences, Settings, Shortcut, Storage, Store};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
@@ -157,32 +156,13 @@ impl FsCancel {
     }
 }
 
-/// fs 结果只来自索引，收藏项需要单独并入，否则置顶项在 fs 模式下永远不出现。
-fn merge_favorites(found: Vec<history::Item>, favorites: &[String], query: &str) -> Vec<history::Item> {
-    let keywords: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
-    let mut pinned: Vec<history::Item> = favorites.iter()
-        .filter(|path| keywords.iter().all(|word| path.to_lowercase().contains(word)))
-        .map(|path| history::Item::new(path.clone()))
-        .collect();
-    pinned.extend(found.into_iter().filter(|item| !favorites.contains(&item.path)));
-    pinned
-}
-
 #[tauri::command]
 async fn search(
     mode: Mode, query: String, state: State<'_, AppState>, cancel: State<'_, FsCancel>,
 ) -> Result<Vec<history::Item>, String> {
     let data = state.lock().map_err(|e| e.to_string())?.data.clone();
-    match mode {
-        Mode::Fs => {
-            let receiver = cancel.begin();
-            let found = actions::locate(&data.settings, &query, receiver).await?;
-            Ok(merge_favorites(found, &data.preferences.favorites, &query))
-        }
-        _ => tauri::async_runtime::spawn_blocking(move || {
-            history::recent(&data.settings, &data.preferences.favorites, &query)
-        }).await.map_err(|e| e.to_string())?,
-    }
+    let receiver = matches!(mode, Mode::Fs).then(|| cancel.begin());
+    code_action_core::search(&data, mode, &query, receiver).await
 }
 
 #[tauri::command]
@@ -195,7 +175,12 @@ async fn remove_history(path: String, state: State<'_, AppState>) -> Result<(), 
 #[tauri::command]
 async fn open_item(action: Action, mode: Mode, path: String, state: State<'_, AppState>) -> Result<(), String> {
     let settings = state.lock().map_err(|e| e.to_string())?.data.settings.clone();
-    actions::open(&settings, action, mode, &path).await
+    let action = match (action, mode) {
+        (Action::Default, Mode::Vscode) => Action::Vscode,
+        (Action::Default, Mode::Zed) => Action::Zed,
+        (action, _) => action,
+    };
+    actions::open(&settings, action, &path).await
 }
 
 #[tauri::command]
@@ -225,6 +210,7 @@ fn main() {
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
             let config = app.path().app_config_dir()?.join("config.json");
+            debug_assert_eq!(config_path().as_ref(), Some(&config));
             let storage = Storage::load(config).map_err(std::io::Error::other)?;
             app.manage(Mutex::new(storage));
             app.manage(FsCancel::default());
@@ -303,8 +289,15 @@ fn main() {
 mod tests {
     use super::*;
 
-    fn paths(items: &[history::Item]) -> Vec<&str> {
-        items.iter().map(|item| item.path.as_str()).collect()
+    #[test]
+    fn config_path_matches_tauri_identifier() {
+        let config: serde_json::Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        assert_eq!(config["identifier"], code_action_core::store::APP_ID);
+        assert!(config["app"].get("appDirectoriesOverride").is_none());
+        let mut context = tauri::test::mock_context(tauri::test::noop_assets());
+        context.config_mut().identifier = config["identifier"].as_str().unwrap().into();
+        let app = tauri::test::mock_builder().build(context).unwrap();
+        assert_eq!(config_path(), Some(app.path().app_config_dir().unwrap().join("config.json")));
     }
 
     #[test]
@@ -321,20 +314,5 @@ mod tests {
         for shortcut in Settings::default().shortcuts {
             assert!(ids.insert(shortcut.accelerator.parse::<Hotkey>().unwrap().id()));
         }
-    }
-
-    #[test]
-    fn favorites_lead_the_result_and_are_not_duplicated() {
-        let favorites = vec!["/a/soil".to_owned()];
-        let found = vec![history::Item::new("/b/rain".into()), history::Item::new("/a/soil".into())];
-        let merged = merge_favorites(found, &favorites, "");
-        assert_eq!(paths(&merged), ["/a/soil", "/b/rain"]);
-    }
-
-    #[test]
-    fn favorites_obey_the_query() {
-        let favorites = vec!["/a/soil".to_owned()];
-        assert!(merge_favorites(Vec::new(), &favorites, "rain").is_empty());
-        assert_eq!(paths(&merge_favorites(Vec::new(), &favorites, "SOIL")), ["/a/soil"]);
     }
 }

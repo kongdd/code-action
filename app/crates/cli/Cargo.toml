@@ -1,0 +1,16 @@
+[package]
+name = "code-action-cli"
+version.workspace = true
+description = "Code Action 的命令行界面"
+edition.workspace = true
+
+[[bin]]
+name = "ca"
+path = "src/main.rs"
+
+[dependencies]
+code-action-core = { path = "../core" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+[dev-dependencies]
+tempfile = "3"

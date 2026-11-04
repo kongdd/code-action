@@ -57,11 +57,14 @@ pub const LIMIT: usize = 200;
 pub async fn locate(
     settings: &Settings,
     query: &str,
-    cancel: tokio::sync::oneshot::Receiver<()>,
+    cancel: Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<Vec<Item>, String> {
-    tokio::select! {
-        _ = cancel => Err("搜索已取消".to_owned()),
-        result = run(settings, query) => result,
+    match cancel {
+        Some(cancel) => tokio::select! {
+            _ = cancel => Err("搜索已取消".to_owned()),
+            result = run(settings, query) => result,
+        },
+        None => run(settings, query).await,
     }
 }
 
@@ -180,21 +183,14 @@ fn pipe(binary: &str, text: &str) -> Result<(), String> {
     if status.success() { Ok(()) } else { Err(format!("退出码 {:?}", status.code())) }
 }
 
-pub async fn open(settings: &Settings, action: Action, mode: Mode, target: &str) -> Result<(), String> {
+pub async fn open(settings: &Settings, action: Action, target: &str) -> Result<(), String> {
     let remote = target.starts_with("vscode-remote:");
     if !remote && (!Path::new(target).is_absolute() || !Path::new(target).exists()) {
         return Err("目标路径不存在或不是绝对路径".into());
     }
-    if remote && (matches!(action, Action::Terminal | Action::Directory)
-        || (matches!(action, Action::Default) && matches!(mode, Mode::Fs))) {
+    if remote && matches!(action, Action::Default | Action::Terminal | Action::Directory) {
         return Err("远程项目只能通过编辑器打开".into());
     }
-    let action = match action {
-        Action::Default => match mode {
-            Mode::Vscode => Action::Vscode, Mode::Zed => Action::Zed, Mode::Fs => Action::Default,
-        },
-        other => other,
-    };
     let mut cmd = match action {
         Action::Vscode => editor(&settings.code, target),
         Action::Zed => editor(&settings.zed, target),
@@ -209,8 +205,8 @@ pub async fn open(settings: &Settings, action: Action, mode: Mode, target: &str)
     // No shell evaluation; all paths are passed as individual arguments.
     cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
     let mut child = cmd.spawn().map_err(|e| format!("无法启动打开命令：{e}"))?;
-    // Reap the launcher without blocking the UI or terminating a long-running editor.
-    tauri::async_runtime::spawn(async move { let _ = child.wait().await; });
+    // 回收启动器进程，但不阻塞调用方，也不拖长编辑器的生命周期。
+    tokio::spawn(async move { let _ = child.wait().await; });
     Ok(())
 }
 
@@ -237,9 +233,54 @@ mod tests {
         }
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let (_sender, receiver) = tokio::sync::oneshot::channel();
-        let result = runtime.block_on(locate(&settings, "*.pdf", receiver));
+        let result = runtime.block_on(locate(&settings, "*.pdf", Some(receiver)));
         if let Ok(files) = result {
             assert!(files.iter().all(|item| item.path.ends_with(".pdf")));
+        }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn cancelled_and_timed_out_searches_terminate_the_process() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let script = dir.path().join("fs");
+        let pidfile = dir.path().join("pid");
+        std::fs::write(&script, format!("#!/bin/sh\necho $$ > '{}'; exec sleep 30\n", pidfile.display())).unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let settings = Settings { fs_binary: script.to_string_lossy().into_owned(), ..Settings::default() };
+
+        for cancel_search in [true, false] {
+            let _ = std::fs::remove_file(&pidfile);
+            let (sender, receiver) = tokio::sync::oneshot::channel();
+            let task = tokio::spawn({
+                let settings = settings.clone();
+                async move { locate(&settings, "query", Some(receiver)).await }
+            });
+            let pid = tokio::time::timeout(Duration::from_secs(2), async {
+                loop {
+                    if let Ok(pid) = std::fs::read_to_string(&pidfile) {
+                        if let Ok(pid) = pid.trim().parse::<u32>() { break pid; }
+                    }
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
+            }).await.unwrap();
+            let sender = if cancel_search {
+                sender.send(()).unwrap();
+                None
+            } else {
+                Some(sender)
+            };
+            let error = task.await.unwrap().unwrap_err();
+            drop(sender);
+            assert!(error.contains(if cancel_search { "取消" } else { "超时" }), "{error}");
+            tokio::time::timeout(Duration::from_secs(2), async {
+                while std::process::Command::new("kill").args(["-0", &pid.to_string()])
+                    .stderr(Stdio::null()).status().unwrap().success() {
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
+            }).await.expect("搜索进程未退出");
         }
     }
 
