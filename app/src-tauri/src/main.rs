@@ -176,6 +176,8 @@ async fn remove_history(path: String, state: State<'_, AppState>) -> Result<(), 
 async fn open_item(action: Action, mode: Mode, path: String, state: State<'_, AppState>) -> Result<(), String> {
     let settings = state.lock().map_err(|e| e.to_string())?.data.settings.clone();
     let action = match (action, mode) {
+        (Action::Default, _) if path.starts_with("ssh://") => Action::Zed,
+        (Action::Default, _) if path.starts_with("vscode-remote:") => Action::Vscode,
         (Action::Default, Mode::Vscode) => Action::Vscode,
         (Action::Default, Mode::Zed) => Action::Zed,
         (action, _) => action,

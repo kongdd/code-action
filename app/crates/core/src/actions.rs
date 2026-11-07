@@ -28,6 +28,7 @@ fn executable(binary: &str) -> PathBuf {
         PathBuf::from("/opt/homebrew/bin"),
         PathBuf::from("/usr/local/bin"),
         PathBuf::from("/Applications/Visual Studio Code.app/Contents/Resources/app/bin"),
+        PathBuf::from("/Applications/Zed.app/Contents/MacOS"),
     ]);
     paths.into_iter().map(|p| p.join(binary)).find(|p| p.is_file()).unwrap_or(path)
 }
@@ -88,6 +89,15 @@ async fn run(settings: &Settings, query: &str) -> Result<Vec<Item>, String> {
 
 fn editor(binary: &str, target: &str) -> Command {
     let remote = target.starts_with("vscode-remote:");
+    if target.starts_with("ssh://") {
+        let cli = Path::new("/Applications/Zed.app/Contents/MacOS/cli");
+        let binary = if binary == "zed" && cfg!(target_os = "macos") && cli.is_file() {
+            cli.to_str().unwrap()
+        } else { binary };
+        let mut cmd = command(binary);
+        cmd.arg(target);
+        return cmd;
+    }
     #[cfg(target_os = "macos")]
     if !remote {
         let app = match binary {
@@ -104,8 +114,10 @@ fn editor(binary: &str, target: &str) -> Command {
     let mut cmd = command(binary);
     if remote {
         cmd.arg(if target.ends_with(".code-workspace") { "--file-uri" } else { "--folder-uri" });
+        cmd.arg(target);
+    } else {
+        cmd.arg("--").arg(target);
     }
-    cmd.arg("--").arg(target);
     cmd
 }
 
@@ -184,7 +196,10 @@ fn pipe(binary: &str, text: &str) -> Result<(), String> {
 }
 
 pub async fn open(settings: &Settings, action: Action, target: &str) -> Result<(), String> {
-    let remote = target.starts_with("vscode-remote:");
+    let remote = target.starts_with("vscode-remote:") || target.starts_with("ssh://");
+    if target.starts_with("ssh://") && !matches!(action, Action::Zed) {
+        return Err("Zed 远程项目只能通过 Zed 打开".into());
+    }
     if !remote && (!Path::new(target).is_absolute() || !Path::new(target).exists()) {
         return Err("目标路径不存在或不是绝对路径".into());
     }
@@ -289,12 +304,21 @@ mod tests {
         let target = "vscode-remote://ssh-remote+host/home/A%20B";
         let cmd = editor("code", target);
         let args: Vec<_> = cmd.as_std().get_args().map(|a| a.to_string_lossy().into_owned()).collect();
-        assert_eq!(args, ["--folder-uri", "--", target]);
+        assert_eq!(args, ["--folder-uri", target]);
+    }
+
+    #[test]
+    fn zed_ssh_uri_is_passed_without_vscode_flags() {
+        let target = "ssh://alice@example.com:2222/home/A%20B";
+        let cmd = editor("zed", target);
+        let args: Vec<_> = cmd.as_std().get_args().map(|a| a.to_string_lossy().into_owned()).collect();
+        assert_eq!(args, [target]);
     }
 
     #[test]
     fn workspace_uses_file_uri_flag() {
         let cmd = editor("code", "vscode-remote://host/a.code-workspace");
-        assert_eq!(cmd.as_std().get_args().next().unwrap(), "--file-uri");
+        let args: Vec<_> = cmd.as_std().get_args().map(|a| a.to_string_lossy().into_owned()).collect();
+        assert_eq!(args, ["--file-uri", "vscode-remote://host/a.code-workspace"]);
     }
 }

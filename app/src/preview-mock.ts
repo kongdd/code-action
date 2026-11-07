@@ -19,6 +19,7 @@ mockIPC((cmd) => {
   if (cmd === "load_store") return {
     settings: {
       database: "",
+      mergeHistory: true,
       fsBinary: "/Users/kongdd/.cargo/bin/fs",
       code: "code",
       zed: "zed",

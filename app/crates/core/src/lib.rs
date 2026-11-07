@@ -3,10 +3,12 @@
 pub mod actions;
 pub mod history;
 pub mod store;
+pub mod zed_history;
 
 use actions::Mode;
 use history::Item;
 use store::Store;
+use std::collections::HashSet;
 
 /// 按模式检索；历史数据库读取在线程池中执行，避免阻塞异步运行时。
 pub async fn search(
@@ -24,18 +26,67 @@ pub async fn search(
             let store = store.clone();
             let query = query.to_owned();
             tokio::task::spawn_blocking(move || {
-                history::recent(&store.settings, &store.preferences.favorites, &query)
+                let vscode = || history::recent(&store.settings, &store.preferences.favorites, &query);
+                let zed = || zed_history::recent(&store.preferences.favorites, &query);
+                if !store.settings.merge_history {
+                    return match mode {
+                        Mode::Vscode => vscode(),
+                        Mode::Zed => zed(),
+                        Mode::Fs => unreachable!(),
+                    };
+                }
+                let (primary, secondary) = match mode {
+                    Mode::Vscode => (vscode(), zed()),
+                    Mode::Zed => (zed(), vscode()),
+                    Mode::Fs => unreachable!(),
+                };
+                merge_histories(primary, secondary, &store.preferences.favorites)
             }).await.map_err(|e| e.to_string())?
         }
     }
+}
+
+fn merge_histories(
+    primary: Result<Vec<Item>, String>, secondary: Result<Vec<Item>, String>, favorites: &[String],
+) -> Result<Vec<Item>, String> {
+    let (mut items, extra) = match (primary, secondary) {
+        (Ok(a), Ok(b)) => (a, b),
+        (Ok(a), Err(_)) | (Err(_), Ok(a)) => (a, Vec::new()),
+        (Err(a), Err(b)) => return Err(format!("{a}\n{b}")),
+    };
+    let mut seen: HashSet<String> = items.iter().map(|item| item.path.clone()).collect();
+    items.extend(extra.into_iter().filter(|item| seen.insert(item.path.clone())));
+    items.sort_by_key(|item| !favorites.contains(&item.path));
+    Ok(items)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[test]
+    fn combined_history_deduplicates_and_preserves_favorites() {
+        let item = |path: &str| Item::new(path.into());
+        let favorites = vec!["/pinned".into()];
+        let result = merge_histories(
+            Ok(vec![item("/a"), item("/shared")]),
+            Ok(vec![item("/pinned"), item("/shared")]), &favorites,
+        ).unwrap();
+        assert_eq!(result.iter().map(|i| i.path.as_str()).collect::<Vec<_>>(), ["/pinned", "/a", "/shared"]);
+        assert_eq!(merge_histories(Err("missing".into()), Ok(vec![item("/a")]), &[]).unwrap().len(), 1);
+        assert!(merge_histories(Err("one".into()), Err("two".into()), &[]).is_err());
+    }
+
+    #[test]
+    fn old_settings_enable_merged_history() {
+        let settings: store::Settings = serde_json::from_str("{}").unwrap();
+        assert!(settings.merge_history);
+        let settings: store::Settings = serde_json::from_str(r#"{"mergeHistory":false}"#).unwrap();
+        assert!(!settings.merge_history);
+    }
+
     #[tokio::test]
-    async fn history_modes_share_search_and_favorites() {
+    async fn vscode_history_search_and_favorites() {
         let dir = tempfile::tempdir().unwrap();
         let database = dir.path().join("state.vscdb");
         let db = rusqlite::Connection::open(&database).unwrap();
@@ -46,11 +97,10 @@ mod tests {
         ]).unwrap();
         let mut store = Store::default();
         store.settings.database = database.to_string_lossy().into_owned();
+        store.settings.merge_history = false;
         store.preferences.favorites = vec!["vscode-remote://host/soil-favorite".into()];
-        for mode in [Mode::Vscode, Mode::Zed] {
-            let items = search(&store, mode, "soil", None).await.unwrap();
-            assert_eq!(items.iter().map(|item| item.path.as_str()).collect::<Vec<_>>(),
-                ["vscode-remote://host/soil-favorite", "vscode-remote://host/soil"]);
-        }
+        let items = search(&store, Mode::Vscode, "soil", None).await.unwrap();
+        assert_eq!(items.iter().map(|item| item.path.as_str()).collect::<Vec<_>>(),
+            ["vscode-remote://host/soil-favorite", "vscode-remote://host/soil"]);
     }
 }

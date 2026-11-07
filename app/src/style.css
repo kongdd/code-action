@@ -254,6 +254,7 @@ header button, header input, header .menu { -webkit-app-region: no-drag; }
   margin-bottom: 13px;
 }
 #settings form.pane input { min-width: 0; border: 1px solid var(--border); padding: 8px 10px; border-radius: 6px; background: var(--surface); }
+#settings form.pane input[type="checkbox"] { justify-self: start; width: 18px; height: 18px; padding: 0; }
 #settings form.pane small { display: block; color: var(--muted); margin: 16px 0; }
 #settings form.pane button[type="submit"] { background: #dde3ec; color: #1f2733; margin-right: 8px; padding: 7px 16px; border-radius: 6px; }
 #settings form.pane button[type="button"] { padding: 7px 16px; border-radius: 6px; color: var(--muted); }

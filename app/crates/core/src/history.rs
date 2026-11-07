@@ -17,7 +17,7 @@ pub struct Item {
 
 impl Item {
     pub fn new(path: String) -> Self {
-        let remote = path.starts_with("vscode-remote:");
+        let remote = path.starts_with("vscode-remote:") || path.starts_with("ssh://");
         let title = path.trim_end_matches(['/', '\\'])
             .rsplit(['/', '\\']).next().unwrap_or(&path).to_owned();
         Self { title, path, remote }
@@ -172,7 +172,7 @@ pub fn recent(settings: &Settings, favorites: &[String], query: &str) -> Result<
     // shared storage 与旧库可能各保留部分记录，合并后统一过滤、去重。
     let histories = read_histories(&database_candidates(settings)?)?;
     let paths = histories.into_iter().flat_map(|(_, entries)| entries);
-    Ok(filter_paths(favorites.iter().cloned().chain(paths), query))
+    Ok(filter_paths(favorites.iter().filter(|p| !p.starts_with("ssh://")).cloned().chain(paths), query))
 }
 
 /// fs 结果只来自索引，收藏项需要单独并入，否则置顶项在 fs 模式下永远不出现。
@@ -186,11 +186,11 @@ pub fn merge_favorites(found: Vec<Item>, favorites: &[String], query: &str) -> V
     pinned
 }
 
-fn filter_paths(paths: impl IntoIterator<Item = String>, query: &str) -> Vec<Item> {
+pub(crate) fn filter_paths(paths: impl IntoIterator<Item = String>, query: &str) -> Vec<Item> {
     let keywords: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
     let mut seen = HashSet::new();
     paths.into_iter()
-        .filter(|path| path.starts_with("vscode-remote:") || Path::new(path).exists())
+        .filter(|path| path.starts_with("vscode-remote:") || path.starts_with("ssh://") || Path::new(path).exists())
         .filter(|path| {
             let lower = path.to_lowercase();
             keywords.iter().all(|word| lower.contains(word))

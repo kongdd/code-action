@@ -40,6 +40,7 @@ impl Shortcut {
 #[serde(default, rename_all = "camelCase")]
 pub struct Settings {
     pub database: String,
+    pub merge_history: bool,
     pub fs_binary: String,
     pub code: String,
     pub zed: String,
@@ -61,6 +62,7 @@ impl Default for Settings {
         };
         Self {
             database: String::new(),
+            merge_history: true,
             fs_binary: if binary.is_file() { binary.to_string_lossy().into() } else { "fs".into() },
             code: "code".into(),
             zed: "zed".into(),

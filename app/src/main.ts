@@ -17,6 +17,7 @@ interface Shortcut {
 }
 interface Settings {
   database: string;
+  mergeHistory: boolean;
   fsBinary: string;
   code: string;
   zed: string;
@@ -298,11 +299,10 @@ function context(event: MouseEvent, item: Item) {
   selected = items.indexOf(item);
   active();
   menu.replaceChildren();
-  const actions: [string, () => void][] = [
-    ["用 VSCode 打开", () => void open(item, "vscode")],
-  ];
+  const actions: [string, () => void][] = [];
+  if (!item.path.startsWith("ssh://")) actions.push(["用 VSCode 打开", () => void open(item, "vscode")]);
+  if (!item.remote || item.path.startsWith("ssh://")) actions.push(["用 Zed 打开", () => void open(item, "zed")]);
   if (!item.remote) actions.push(
-    ["用 Zed 打开", () => void open(item, "zed")],
     ["打开所在目录", () => void open(item, "directory")],
     ["在终端打开", () => void open(item, "terminal")],
   );
@@ -311,7 +311,7 @@ function context(event: MouseEvent, item: Item) {
     ["复制路径", () => { void invoke("copy_text", { text: item.path }).catch(report); }],
     ["复制 Linux 路径", () => { void invoke("copy_text", { text: item.path.replaceAll("\\", "/") }).catch(report); }],
   );
-  if (mode !== "fs") actions.push(["从历史记录移除", () => void removeHistory(item)]);
+  if (mode === "vscode" && !store.settings.mergeHistory) actions.push(["从历史记录移除", () => void removeHistory(item)]);
   for (const [label, action] of actions) {
     const button = document.createElement("button");
     button.type = "button";
@@ -468,7 +468,9 @@ function settings(visible: boolean) {
   if (visible) {
     for (const [name, value] of Object.entries(store.settings)) {
       if (name === "shortcuts" || name === "aliases") continue;
-      (generalForm.elements.namedItem(name) as HTMLInputElement).value = value;
+      const input = generalForm.elements.namedItem(name) as HTMLInputElement;
+      if (input.type === "checkbox") input.checked = Boolean(value);
+      else input.value = String(value);
     }
     renderShortcuts();
     renderAliases();
@@ -519,6 +521,7 @@ generalForm.addEventListener("submit", async (event) => {
     ...Object.fromEntries(
       [...new FormData(generalForm)].map(([name, value]) => [name, String(value).trim()]),
     ),
+    mergeHistory: (generalForm.elements.namedItem("mergeHistory") as HTMLInputElement).checked,
   };
   try {
     await invoke("save_settings", { settings: updated });
