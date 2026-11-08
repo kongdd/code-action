@@ -6,14 +6,12 @@ on:
       - "app/**"
       - "crates/**"
       - "Cargo.toml"
-      - "Cargo.lock"
       - ".github/workflows/build-desktop.yml"
   pull_request:
     paths:
       - "app/**"
       - "crates/**"
       - "Cargo.toml"
-      - "Cargo.lock"
       - ".github/workflows/build-desktop.yml"
   workflow_dispatch:
 
@@ -64,10 +62,10 @@ jobs:
         run: npm ci
 
       - name: Test workspace
-        run: cargo test --workspace --locked
+        run: cargo test --workspace
 
       - name: Build CLI
-        run: cargo build -p code-action-cli --release --locked
+        run: cargo build -p code-action-cli --release
 
       - name: Compile desktop app
         run: npx tauri build --ci --no-bundle
