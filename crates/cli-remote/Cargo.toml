@@ -20,3 +20,7 @@ path = "remote-editor.rs"
 [[bin]]
 name = "remote-open"
 path = "remote-open.rs"
+
+[[bin]]
+name = "remote-run"
+path = "remote-run.rs"
