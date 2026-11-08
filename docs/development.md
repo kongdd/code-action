@@ -69,7 +69,7 @@ macOS 在 NFS 挂载盘上生成的 `._*` AppleDouble 旁路文件可能破坏 T
 
 ### 历史项目与文件搜索
 
-- 默认合并 VSCode 与 Zed 的项目历史，可在基础设置中关闭合并、分别检索。VSCode 读取 `state.vscdb` 的 `recently.opened` 与 `history.recentlyOpenedPathsList`，支持 WAL 实时数据；Zed 读取自身工作区历史，支持本地与 SSH 项目。合并模式暂不支持从 App 删除历史。
+- 默认合并 VSCode 与 Zed 的项目历史，可在基础设置中关闭合并、分别检索。VSCode 读取 `state.vscdb` 的 `recently.opened` 与 `history.recentlyOpenedPathsList`，支持 WAL 实时数据；右键可移除 VSCode 历史记录并同步数据库。Zed 读取自身工作区历史，支持本地与 SSH 项目；同一项目若也存在于 Zed 历史中，移除后仍会显示。
 - “VSCode 数据库”留空时，自动合并 `~/.vscode-shared/sharedStorage/state.vscdb`（VSCode 1.118+）与平台默认位置的记录并去重；macOS 的传统位置为 `~/Library/Application Support/Code/User/globalStorage/state.vscdb`。指定路径时只读取该数据库。
 - 文件搜索调用本机 [fs](https://github.com/kongdd/fs) 索引。需先安装并建立索引，文件变化后运行 `fs updatedb`。
 - 搜索表达式支持 `soil rain`、`*.pdf`、`Kong exts:docx,pdf`、`path:papers Kong`，最多显示 200 条结果。

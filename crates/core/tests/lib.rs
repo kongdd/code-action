@@ -4,11 +4,15 @@ use super::*;
 fn combined_history_deduplicates_and_preserves_favorites() {
     let item = |path: &str| Item::new(path.into());
     let favorites = vec!["/pinned".into()];
+    let mut vscode_shared = item("/shared");
+    vscode_shared.vscode_history = true;
     let result = merge_histories(
         Ok(vec![item("/a"), item("/shared")]),
-        Ok(vec![item("/pinned"), item("/shared")]), &favorites,
+        Ok(vec![item("/pinned"), vscode_shared]), &favorites,
     ).unwrap();
     assert_eq!(result.iter().map(|i| i.path.as_str()).collect::<Vec<_>>(), ["/pinned", "/a", "/shared"]);
+    assert!(result[2].vscode_history);
+    assert!(!result[0].vscode_history);
     assert_eq!(merge_histories(Err("missing".into()), Ok(vec![item("/a")]), &[]).unwrap().len(), 1);
     assert!(merge_histories(Err("one".into()), Err("two".into()), &[]).is_err());
 }
@@ -38,4 +42,6 @@ async fn vscode_history_search_and_favorites() {
     let items = search(&store, Mode::Vscode, "soil", None).await.unwrap();
     assert_eq!(items.iter().map(|item| item.path.as_str()).collect::<Vec<_>>(),
         ["vscode-remote://host/soil-favorite", "vscode-remote://host/soil"]);
+    assert!(!items[0].vscode_history);
+    assert!(items[1].vscode_history);
 }

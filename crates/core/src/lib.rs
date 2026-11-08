@@ -8,7 +8,7 @@ pub mod zed_history;
 use actions::Mode;
 use history::Item;
 use store::Store;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 /// 按模式检索；历史数据库读取在线程池中执行，避免阻塞异步运行时。
 pub async fn search(
@@ -54,8 +54,15 @@ fn merge_histories(
         (Ok(a), Err(_)) | (Err(_), Ok(a)) => (a, Vec::new()),
         (Err(a), Err(b)) => return Err(format!("{a}\n{b}")),
     };
-    let mut seen: HashSet<String> = items.iter().map(|item| item.path.clone()).collect();
-    items.extend(extra.into_iter().filter(|item| seen.insert(item.path.clone())));
+    let mut seen: HashMap<String, usize> = items.iter().enumerate().map(|(i, item)| (item.path.clone(), i)).collect();
+    for item in extra {
+        if let Some(&i) = seen.get(&item.path) {
+            items[i].vscode_history |= item.vscode_history;
+        } else {
+            seen.insert(item.path.clone(), items.len());
+            items.push(item);
+        }
+    }
     items.sort_by_key(|item| !favorites.contains(&item.path));
     Ok(items)
 }

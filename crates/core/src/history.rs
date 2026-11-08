@@ -13,6 +13,7 @@ pub struct Item {
     pub title: String,
     pub path: String,
     pub remote: bool,
+    pub vscode_history: bool,
 }
 
 impl Item {
@@ -20,7 +21,7 @@ impl Item {
         let remote = path.starts_with("vscode-remote:") || path.starts_with("ssh://");
         let title = path.trim_end_matches(['/', '\\'])
             .rsplit(['/', '\\']).next().unwrap_or(&path).to_owned();
-        Self { title, path, remote }
+        Self { title, path, remote, vscode_history: false }
     }
 }
 
@@ -171,8 +172,11 @@ fn remove_from_database(path: &Path, target: &str) -> Result<(), String> {
 pub fn recent(settings: &Settings, favorites: &[String], query: &str) -> Result<Vec<Item>, String> {
     // shared storage 与旧库可能各保留部分记录，合并后统一过滤、去重。
     let histories = read_histories(&database_candidates(settings)?)?;
-    let paths = histories.into_iter().flat_map(|(_, entries)| entries);
-    Ok(filter_paths(favorites.iter().filter(|p| !p.starts_with("ssh://")).cloned().chain(paths), query))
+    let paths: Vec<String> = histories.into_iter().flat_map(|(_, entries)| entries).collect();
+    let known: HashSet<&str> = paths.iter().map(String::as_str).collect();
+    let mut items = filter_paths(favorites.iter().filter(|p| !p.starts_with("ssh://")).cloned().chain(paths.iter().cloned()), query);
+    for item in &mut items { item.vscode_history = known.contains(item.path.as_str()); }
+    Ok(items)
 }
 
 /// fs 结果只来自索引，收藏项需要单独并入，否则置顶项在 fs 模式下永远不出现。

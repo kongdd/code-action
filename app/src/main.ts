@@ -7,7 +7,7 @@ import "./style.css";
 
 type Mode = "vscode" | "zed" | "fs";
 type Action = "default" | "vscode" | "zed" | "directory" | "terminal";
-interface Item { title: string; path: string; remote: boolean }
+interface Item { title: string; path: string; remote: boolean; vscode_history: boolean }
 interface Shortcut {
   id: string;
   accelerator: string;
@@ -314,7 +314,7 @@ function context(event: MouseEvent, item: Item) {
     ["复制路径", () => { void invoke("copy_text", { text: item.path }).catch(report); }],
     ["复制 Linux 路径", () => { void invoke("copy_text", { text: item.path.replaceAll("\\", "/") }).catch(report); }],
   );
-  if (mode === "vscode" && !store.settings.mergeHistory) actions.push(["从历史记录移除", () => void removeHistory(item)]);
+  if (mode !== "fs" && item.vscode_history) actions.push(["从 VSCode 历史记录移除", () => void removeHistory(item)]);
   for (const [label, action] of actions) {
     const button = document.createElement("button");
     button.type = "button";

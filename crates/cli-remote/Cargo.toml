@@ -1,5 +1,5 @@
 [package]
-name = "action-cli"
+name = "cli-remote"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,5 +14,9 @@ strip = true
 panic = "abort"
 
 [[bin]]
-name = "editor"
-path = "main.rs"
+name = "remote-editor"
+path = "remote-editor.rs"
+
+[[bin]]
+name = "remote-open"
+path = "remote-open.rs"
