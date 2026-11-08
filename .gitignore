@@ -1,8 +1,5 @@
-dist
+.vscode
 
-release/
-
-backup
 node_modules
 # apps
 
@@ -10,13 +7,13 @@ node_modules
 ._*
 .pi
 *.png
-*.svg
+# *.svg
 *lock*
 
 # 前端锁文件、应用图标与前端资源需要入库。
 !app/package-lock.json
 !app/src-tauri/icons/*.png
-!icon/*.svg
+# !icon/*.svg
 
 # 仅保留 README 引用的截图。
 images/*

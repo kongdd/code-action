@@ -3,6 +3,7 @@ name = "code-action-core"
 version.workspace = true
 description = "Code Action 的核心逻辑：历史记录、文件检索与打开动作"
 edition.workspace = true
+autotests = false
 
 [dependencies]
 serde = { workspace = true }

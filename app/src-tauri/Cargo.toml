@@ -3,6 +3,7 @@ name = "code-action"
 version.workspace = true
 description = "Local project and file launcher"
 edition.workspace = true
+autotests = false
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

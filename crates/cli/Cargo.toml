@@ -3,6 +3,7 @@ name = "code-action-cli"
 version.workspace = true
 description = "Code Action 的命令行界面"
 edition.workspace = true
+autotests = false
 
 [[bin]]
 name = "ca"
