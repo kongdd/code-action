@@ -133,5 +133,5 @@ fn remove(args: &[String]) -> Result<(), String> {
 }
 
 #[cfg(test)]
-#[path = "../tests/cli.rs"]
+#[path = "tests/cli.rs"]
 mod tests;
