@@ -21,3 +21,14 @@ node_modules
 # 仅保留 README 引用的截图。
 images/*
 !images/image01.png
+
+*es*
+
+# Rust 单元测试模块
+!/crates/
+!/crates/core/tests/
+!/crates/core/tests/**
+!/crates/cli/tests/
+!/crates/cli/tests/**
+!/app/src-tauri/tests/
+!/app/src-tauri/tests/**
