@@ -308,8 +308,9 @@ function context(event: MouseEvent, item: Item) {
     ["打开所在目录", () => void open(item, "directory")],
     ["在终端打开", () => void open(item, "terminal")],
   );
+  actions.push([store.preferences.favorites.includes(item.path) ? "取消置顶" : "置顶", () => void pin(item)]);
+  if (!item.remote) actions.push(["复制文件", () => { void invoke("copy_file", { path: item.path }).catch(report); }]);
   actions.push(
-    [store.preferences.favorites.includes(item.path) ? "取消置顶" : "置顶", () => void pin(item)],
     ["复制路径", () => { void invoke("copy_text", { text: item.path }).catch(report); }],
     ["复制 Linux 路径", () => { void invoke("copy_text", { text: item.path.replaceAll("\\", "/") }).catch(report); }],
   );

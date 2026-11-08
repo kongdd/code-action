@@ -161,6 +161,41 @@ pub fn copy(text: &str) -> Result<(), String> {
     Err(format!("复制到剪贴板失败（{}）", errors.join("；")))
 }
 
+/// 将本地文件或目录以文件格式放入剪贴板，而非复制路径文本。
+pub fn copy_file(path: &str) -> Result<(), String> {
+    let path = Path::new(path);
+    if !path.is_absolute() || !path.exists() {
+        return Err("目标路径不存在或不是绝对路径".into());
+    }
+    #[cfg(target_os = "macos")]
+    let output = std::process::Command::new("/usr/bin/osascript")
+        .args(["-e", "on run argv\nset the clipboard to (POSIX file (item 1 of argv) as alias)\nend run", "--"])
+        .arg(path).output();
+    #[cfg(target_os = "windows")]
+    let output = std::process::Command::new("powershell.exe")
+        .args(["-NoProfile", "-NonInteractive", "-STA", "-Command", "Add-Type -AssemblyName System.Windows.Forms; $files = New-Object System.Collections.Specialized.StringCollection; [void]$files.Add($env:COPY_FILE_PATH); [System.Windows.Forms.Clipboard]::SetFileDropList($files)"])
+        .env("COPY_FILE_PATH", path).output();
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        let uri = url::Url::from_file_path(path).map_err(|_| "无法转换文件路径")?;
+        let mut errors = Vec::new();
+        for (binary, args) in [("wl-copy", &["--type", "text/uri-list"][..]), ("xclip", &["-selection", "clipboard", "-t", "text/uri-list"][..])] {
+            match pipe_args(binary, args, &format!("{uri}\r\n")) {
+                Ok(()) => return Ok(()),
+                Err(error) => errors.push(format!("{binary}: {error}")),
+            }
+        }
+        return Err(format!("复制文件失败（{}）", errors.join("；")));
+    }
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    {
+        let output = output.map_err(|e| e.to_string())?;
+        if output.status.success() { Ok(()) } else {
+            Err(format!("复制文件失败：{}", String::from_utf8_lossy(&output.stderr)))
+        }
+    }
+}
+
 #[cfg(target_os = "macos")]
 const CLIPBOARD: &[&str] = &["pbcopy"];
 #[cfg(target_os = "windows")]
@@ -177,11 +212,15 @@ fn clipboard_args(binary: &str) -> &'static [&'static str] {
 }
 
 fn pipe(binary: &str, text: &str) -> Result<(), String> {
+    pipe_args(binary, clipboard_args(binary), text)
+}
+
+fn pipe_args(binary: &str, args: &[&str], text: &str) -> Result<(), String> {
     use std::io::Write;
     use std::process::{Command as Std, Stdio};
     #[allow(unused_mut)]
     let mut command = Std::new(binary);
-    command.args(clipboard_args(binary)).stdin(Stdio::piped())
+    command.args(args).stdin(Stdio::piped())
         .stdout(Stdio::null()).stderr(Stdio::null());
     #[cfg(windows)]
     {

@@ -15,4 +15,4 @@ panic = "abort"
 
 [[bin]]
 name = "editor"
-path = "src/main.rs"
+path = "main.rs"

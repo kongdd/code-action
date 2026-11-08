@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "check": "tsc --noEmit",
+    "dev": "node node_modules/vite/bin/vite.js --host 127.0.0.1",
+    "check": "node node_modules/typescript/bin/tsc --noEmit",
     "clean": "bash scripts/clean-appledouble.sh",
-    "build": "npm run clean && npm run check && vite build",
+    "build": "npm run clean && npm run check && node node_modules/vite/bin/vite.js build",
     "app:dev": "bash scripts/tauri.sh dev",
     "app:build": "bash scripts/tauri.sh build",
     "cli:build": "cargo build -p code-action-cli --release",

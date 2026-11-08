@@ -191,6 +191,11 @@ fn copy_text(text: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn copy_file(path: String) -> Result<(), String> {
+    actions::copy_file(&path)
+}
+
+#[tauri::command]
 fn hide_window(window: tauri::WebviewWindow) -> Result<(), String> {
     window.hide().map_err(|e| e.to_string())
 }
@@ -204,7 +209,7 @@ fn main() {
         }))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
-            load_store, save_settings, save_preferences, save_shortcuts, search, open_item, copy_text, remove_history,
+            load_store, save_settings, save_preferences, save_shortcuts, search, open_item, copy_text, copy_file, remove_history,
             hide_window,
         ])
         .setup(|app| {
