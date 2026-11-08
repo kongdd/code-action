@@ -4,7 +4,7 @@ use std::{fmt::Write, process::{Command, ExitCode}};
 #[derive(Parser)]
 #[command(
     about = "用 VSCode 或 Zed 打开本地或 SSH 远程路径",
-    after_help = "示例：\n  action .\n  action ~/project --zed\n  action /home/user/project --host my-server\n  action /home/user/project --zed --host my-server\n\n远程相对路径按本机当前目录解析，远程主机上须存在相同路径。"
+    after_help = "示例：\n  editor .\n  editor ~/project --zed\n  editor /home/user/project --host my-server\n  editor /home/user/project --zed --host my-server\n\n远程相对路径按本机当前目录解析，远程主机上须存在相同路径。"
 )]
 struct Args {
     /// 项目路径，默认为当前目录

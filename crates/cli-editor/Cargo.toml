@@ -14,5 +14,5 @@ strip = true
 panic = "abort"
 
 [[bin]]
-name = "action"
+name = "editor"
 path = "src/main.rs"
