@@ -195,6 +195,27 @@ fn pipe(binary: &str, text: &str) -> Result<(), String> {
     if status.success() { Ok(()) } else { Err(format!("退出码 {:?}", status.code())) }
 }
 
+fn zed_ssh_target(target: &str) -> Result<String, String> {
+    let rest = target.strip_prefix("vscode-remote://ssh-remote+")
+        .ok_or("Zed 仅支持打开 VSCode 的 SSH 远程项目")?;
+    let (authority, path) = rest.split_once('/').ok_or("无效的 SSH 远程路径")?;
+    // Remote SSH may encode its authority as a hexadecimal JSON object.
+    let decoded = (authority.len() % 2 == 0).then(|| {
+        authority.as_bytes().chunks_exact(2).map(|pair| {
+            std::str::from_utf8(pair).ok().and_then(|s| u8::from_str_radix(s, 16).ok())
+        }).collect::<Option<Vec<_>>>()
+    }).flatten();
+    let host = decoded.as_deref().and_then(|bytes| serde_json::from_slice::<serde_json::Value>(bytes).ok())
+        .and_then(|value| value.get("hostName")?.as_str().map(str::to_owned))
+        .unwrap_or_else(|| authority.to_owned());
+    let uri = format!("ssh://{host}/{path}");
+    let parsed = url::Url::parse(&uri).map_err(|_| "无效的 SSH 远程地址")?;
+    if parsed.host_str().is_none() || parsed.password().is_some() || parsed.query().is_some() || parsed.fragment().is_some() {
+        return Err("无效的 SSH 远程地址".into());
+    }
+    Ok(uri)
+}
+
 pub async fn open(settings: &Settings, action: Action, target: &str) -> Result<(), String> {
     let remote = target.starts_with("vscode-remote:") || target.starts_with("ssh://");
     if target.starts_with("ssh://") && !matches!(action, Action::Zed) {
@@ -208,6 +229,7 @@ pub async fn open(settings: &Settings, action: Action, target: &str) -> Result<(
     }
     let mut cmd = match action {
         Action::Vscode => editor(&settings.code, target),
+        Action::Zed if target.starts_with("vscode-remote:") => editor(&settings.zed, &zed_ssh_target(target)?),
         Action::Zed => editor(&settings.zed, target),
         Action::Default => open_path(target),
         Action::Directory | Action::Terminal => {
@@ -305,6 +327,16 @@ mod tests {
         let cmd = editor("code", target);
         let args: Vec<_> = cmd.as_std().get_args().map(|a| a.to_string_lossy().into_owned()).collect();
         assert_eq!(args, ["--folder-uri", target]);
+    }
+
+    #[test]
+    fn vscode_ssh_targets_convert_to_zed_uris() {
+        assert_eq!(zed_ssh_target("vscode-remote://ssh-remote+my-host/home/A%20B").unwrap(),
+            "ssh://my-host/home/A%20B");
+        assert_eq!(zed_ssh_target("vscode-remote://ssh-remote+7b22686f73744e616d65223a22616c696365406578616d706c652e636f6d227d/home/a").unwrap(),
+            "ssh://alice@example.com/home/a");
+        assert!(zed_ssh_target("vscode-remote://wsl+Ubuntu/home/a").is_err());
+        assert!(zed_ssh_target("vscode-remote://ssh-remote+/home/a").is_err());
     }
 
     #[test]

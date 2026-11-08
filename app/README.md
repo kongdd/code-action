@@ -43,7 +43,7 @@
 
 ## 命令行版
 
-桌面版与命令行版共用 `crates/core`，配置也取自同一份 `config.json`。
+桌面版与命令行版共用根目录下的 `crates/core`，配置也取自同一份 `config.json`。
 
 ```bash
 cargo build -p code-action-cli --release   # 产物 ca 位于 Cargo 的 target/release 目录

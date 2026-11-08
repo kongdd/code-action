@@ -14,15 +14,26 @@ npm run app:build   # 打包
 npm run test        # Rust 单元测试
 ```
 
-`app/` 是 Cargo 工作区：`crates/core` 存放共享逻辑，`crates/cli` 是命令行版（产物 `ca`），`src-tauri` 只负责界面与系统集成。
-Cargo 产物目录由 Cargo 配置决定，可用 `CARGO_TARGET_DIR` 覆盖；CI 中位于 `app/target`。
+仓库根目录是 Cargo 工作区：`crates/core` 存放共享逻辑，`crates/cli` 是命令行版（产物 `ca`），`app/src-tauri` 只负责界面与系统集成。
+Cargo 产物目录由 Cargo 配置决定，可用 `CARGO_TARGET_DIR` 覆盖；CI 中位于 `target`。
+
+### Bash 函数
+
+```bash
+source /path/to/code-action/scripts/action.sh
+action ~/project --zed
+action /home/user/project --host my-server
+action /home/user/project --zed --host my-server
+```
+
+默认使用 VSCode 和当前目录；远程路径必须是绝对路径，主机使用 SSH 配置中的别名。
 
 ### 命令行版
 
 ```bash
 cargo build -p code-action-cli --release
-./target/release/ca list          # 列出 VSCode 最近打开的项目
-./target/release/ca find '*.pdf'  # 用 fs 检索本地文件
+../target/release/ca list          # 列出 VSCode 最近打开的项目
+../target/release/ca find '*.pdf'  # 用 fs 检索本地文件
 ```
 
 命令行版与桌面版共用 `crates/core` 与同一份 `config.json`；配置不存在时使用默认值，读取失败或损坏时中止并报错。
@@ -30,7 +41,7 @@ cargo build -p code-action-cli --release
 ### 持续集成
 
 [Desktop build](../.github/workflows/build-desktop.yml) 在 Windows、Linux、macOS 上运行 Rust 测试，编译 CLI、前端与 Tauri 应用，不打包或发布。
-修改 `app/` 或工作流后推送、提交 PR 自动触发，也可在 GitHub Actions 页面手动运行。
+修改 `app/`、`crates/`、工作区清单或工作流后推送、提交 PR 自动触发，也可在 GitHub Actions 页面手动运行。
 编译检查不代表已验证各平台的桌面交互。
 
 ### 发布

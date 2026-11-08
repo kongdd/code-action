@@ -4,10 +4,16 @@ on:
   push:
     paths:
       - "app/**"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/build-desktop.yml"
   pull_request:
     paths:
       - "app/**"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/build-desktop.yml"
   workflow_dispatch:
 
@@ -52,7 +58,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: app -> target
+          workspaces: . -> target
 
       - name: Install frontend dependencies
         run: npm ci

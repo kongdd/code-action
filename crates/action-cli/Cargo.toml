@@ -1,0 +1,18 @@
+[package]
+name = "action-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[[bin]]
+name = "action"
+path = "src/main.rs"

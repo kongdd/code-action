@@ -15,6 +15,7 @@ node_modules
 
 # 锁文件、应用图标与前端资源需要入库，保证 CI 可复现、构建产物完整。
 !app/package-lock.json
+!/Cargo.lock
 !app/src-tauri/Cargo.lock
 !app/src-tauri/icons/*.png
 !icon/*.svg
@@ -22,3 +23,5 @@ node_modules
 # 仅保留 README 引用的截图。
 images/*
 !images/image01.png
+
+*lock*

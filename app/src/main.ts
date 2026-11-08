@@ -301,7 +301,9 @@ function context(event: MouseEvent, item: Item) {
   menu.replaceChildren();
   const actions: [string, () => void][] = [];
   if (!item.path.startsWith("ssh://")) actions.push(["用 VSCode 打开", () => void open(item, "vscode")]);
-  if (!item.remote || item.path.startsWith("ssh://")) actions.push(["用 Zed 打开", () => void open(item, "zed")]);
+  if (!item.remote || item.path.startsWith("ssh://") || item.path.startsWith("vscode-remote://ssh-remote+")) {
+    actions.push(["用 Zed 打开", () => void open(item, "zed")]);
+  }
   if (!item.remote) actions.push(
     ["打开所在目录", () => void open(item, "directory")],
     ["在终端打开", () => void open(item, "terminal")],
