@@ -29,3 +29,5 @@ images/*
 !/crates/cli/tests/**
 !/app/src-tauri/tests/
 !/app/src-tauri/tests/**
+
+target

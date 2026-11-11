@@ -168,9 +168,9 @@ pub fn copy_file(path: &str) -> Result<(), String> {
         return Err("目标路径不存在或不是绝对路径".into());
     }
     #[cfg(target_os = "macos")]
-    let output = std::process::Command::new("/usr/bin/osascript")
-        .args(["-e", "on run argv\nset the clipboard to (POSIX file (item 1 of argv) as alias)\nend run", "--"])
-        .arg(path).output();
+    {
+        return write_file_to_pasteboard(&objc2_app_kit::NSPasteboard::generalPasteboard(), path);
+    }
     #[cfg(target_os = "windows")]
     let output = std::process::Command::new("powershell.exe")
         .args(["-NoProfile", "-NonInteractive", "-STA", "-Command", "Add-Type -AssemblyName System.Windows.Forms; $files = New-Object System.Collections.Specialized.StringCollection; [void]$files.Add($env:COPY_FILE_PATH); [System.Windows.Forms.Clipboard]::SetFileDropList($files)"])
@@ -187,12 +187,29 @@ pub fn copy_file(path: &str) -> Result<(), String> {
         }
         return Err(format!("复制文件失败（{}）", errors.join("；")));
     }
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    #[cfg(target_os = "windows")]
     {
         let output = output.map_err(|e| e.to_string())?;
         if output.status.success() { Ok(()) } else {
             Err(format!("复制文件失败：{}", String::from_utf8_lossy(&output.stderr)))
         }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn write_file_to_pasteboard(board: &objc2_app_kit::NSPasteboard, path: &Path) -> Result<(), String> {
+    use objc2::runtime::ProtocolObject;
+    use objc2_app_kit::NSPasteboardWriting;
+    use objc2_foundation::{NSArray, NSString, NSURL};
+
+    // 直接写入 AppKit 文件剪贴板，不依赖外部脚本进程。
+    let file = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+    let file: &ProtocolObject<dyn NSPasteboardWriting> = ProtocolObject::from_ref(&*file);
+    board.clearContents();
+    if board.writeObjects(&NSArray::from_slice(&[file])) {
+        Ok(())
+    } else {
+        Err("复制文件失败：无法写入系统剪贴板".into())
     }
 }
 

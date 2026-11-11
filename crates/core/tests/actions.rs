@@ -1,5 +1,29 @@
 use super::*;
 
+#[cfg(target_os = "macos")]
+#[test]
+fn native_file_clipboard_preserves_files_and_folders() {
+    use objc2_app_kit::{NSPasteboard, NSPasteboardTypeFileURL};
+    use objc2_foundation::NSString;
+
+    objc2::rc::autoreleasepool(|_| {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("中文 file #%.txt");
+        std::fs::write(&file, "clipboard test").unwrap();
+        let board = NSPasteboard::pasteboardWithUniqueName();
+        for path in [file.as_path(), dir.path()] {
+            write_file_to_pasteboard(&board, path).unwrap();
+            let value = board.stringForType(unsafe { NSPasteboardTypeFileURL }).unwrap();
+            let url = url::Url::parse(&value.to_string()).unwrap();
+            assert_eq!(url.to_file_path().unwrap(), path);
+            assert!(board
+                .propertyListForType(&NSString::from_str("NSFilenamesPboardType"))
+                .is_some());
+        }
+        board.clearContents();
+    });
+}
+
 #[test]
 fn query_flags_precede_expression_and_preserve_quotes() {
     assert_eq!(locate_args(r#"soil -i path:"A B" rain"#),
