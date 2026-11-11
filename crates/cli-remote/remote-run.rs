@@ -18,10 +18,7 @@ struct Args {
 fn ssh_command(args: &Args) -> Result<Command, String> {
     if args.host.is_empty()
         || args.host.starts_with('-')
-        || !args
-            .host
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
+        || !args.host.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
     {
         return Err("远程主机须为 SSH 别名".into());
     }
@@ -35,9 +32,7 @@ fn ssh_command(args: &Args) -> Result<Command, String> {
 }
 
 fn run(args: Args) -> Result<ExitCode, String> {
-    let status = ssh_command(&args)?
-        .status()
-        .map_err(|e| format!("无法启动 ssh：{e}"))?;
+    let status = ssh_command(&args)?.status().map_err(|e| format!("无法启动 ssh：{e}"))?;
     Ok(ExitCode::from(status.code().unwrap_or(1) as u8))
 }
 
@@ -77,10 +72,7 @@ mod tests {
     #[test]
     fn rejects_invalid_hosts() {
         for host in ["", "-server", "user@server", "server;id", "server\n", "a b"] {
-            let args = Args {
-                host: host.into(),
-                command: "echo hello".into(),
-            };
+            let args = Args { host: host.into(), command: "echo hello".into() };
             assert!(ssh_command(&args).is_err(), "{host:?}");
         }
     }
@@ -88,10 +80,7 @@ mod tests {
     #[test]
     fn rejects_empty_commands() {
         for script in ["", " \n\t"] {
-            let args = Args {
-                host: "my-server".into(),
-                command: script.into(),
-            };
+            let args = Args { host: "my-server".into(), command: script.into() };
             assert!(ssh_command(&args).is_err());
         }
     }
