@@ -7,10 +7,10 @@
   </head>
   <body>
     <main id="app">
-      <header>
-        <div class="tabs">
-          <img class="logo" src="./icon/vscode.svg" alt="" />
-          <span class="brand">Code Action</span>
+      <header data-tauri-drag-region>
+        <div class="tabs" data-tauri-drag-region>
+          <img class="logo" src="./icon/vscode.svg" alt="" data-tauri-drag-region />
+          <span class="brand" data-tauri-drag-region>Code Action</span>
           <div class="modes">
             <button id="mode-toggle" class="chip" aria-haspopup="listbox" aria-expanded="false">fs_action</button>
             <ul id="mode-menu" class="menu" role="listbox" aria-label="搜索模式" hidden>
@@ -52,6 +52,7 @@
           <button class="tab" role="tab" data-tab="shortcut" aria-selected="true">全局快捷键</button>
           <button class="tab" role="tab" data-tab="alias" aria-selected="false">功能别名</button>
           <button class="tab" role="tab" data-tab="general" aria-selected="false">基础设置</button>
+          <button class="tab" role="tab" data-tab="fs-update" aria-selected="false">更新索引</button>
         </nav>
 
         <div class="pane" data-pane="shortcut">
@@ -63,6 +64,15 @@
         <div class="pane" data-pane="alias" hidden>
           <div class="rows" id="alias-rows"></div>
           <p class="hint">别名会显示在顶部功能胶囊上，留空则使用默认名称。</p>
+        </div>
+
+        <div class="pane" data-pane="fs-update" hidden>
+          <div class="fs-update-actions">
+            <button type="button" data-fs-target="local">更新本地索引</button>
+            <button type="button" data-fs-target="nas">更新 NAS 索引</button>
+          </div>
+          <p id="fs-update-status" role="status">选择更新目标。</p>
+          <pre id="fs-update-output" aria-label="更新输出" tabindex="0"></pre>
         </div>
 
         <form class="pane" data-pane="general" hidden>

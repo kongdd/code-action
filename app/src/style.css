@@ -31,10 +31,8 @@ header {
   background: var(--surface);
   user-select: none;
   flex-shrink: 0;
-  /* 无边框标题栏，只有顶栏空白处可拖动窗口。 */
-  -webkit-app-region: drag;
+  /* 顶栏空白处可拖动窗口。 */
 }
-header button, header input, header .menu { -webkit-app-region: no-drag; }
 .tabs { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .logo { width: 22px; height: 22px; }
 .brand { font-size: 16px; font-weight: 500; letter-spacing: 0.2px; }
@@ -246,6 +244,20 @@ header button, header input, header .menu { -webkit-app-region: no-drag; }
 }
 .outline:hover { background: #eef4fd; }
 .hint { color: var(--muted); font-size: 12.5px; margin: 14px 0 0; }
+.fs-update-actions { display: flex; gap: 10px; }
+.fs-update-actions button { padding: 8px 16px; border: 1px solid var(--accent); border-radius: 8px; color: var(--accent); }
+.fs-update-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+#fs-update-status { color: var(--muted); font-size: 13px; }
+#fs-update-output {
+  height: 220px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 
 #settings form.pane label {
   display: grid;

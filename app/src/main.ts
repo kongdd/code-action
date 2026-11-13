@@ -517,6 +517,36 @@ for (const tab of document.querySelectorAll<HTMLElement>(".tab[data-tab]")) {
   });
 }
 
+const fsUpdateButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-fs-target]")];
+const fsUpdateOutput = element("#fs-update-output");
+const fsUpdateStatus = element("#fs-update-status");
+let fsUpdating = false;
+
+for (const button of fsUpdateButtons) {
+  button.addEventListener("click", async () => {
+    if (fsUpdating) return;
+    fsUpdating = true;
+    fsUpdateButtons.forEach((item) => { item.disabled = true; });
+    fsUpdateOutput.textContent = "";
+    fsUpdateStatus.textContent = "更新中…";
+    let unlisten: (() => void) | undefined;
+    try {
+      unlisten = await listen<string>("fs-update-output", (event) => {
+        fsUpdateOutput.textContent += event.payload;
+        fsUpdateOutput.scrollTop = fsUpdateOutput.scrollHeight;
+      });
+      await invoke("update_fs_database", { target: button.dataset.fsTarget });
+      fsUpdateStatus.textContent = "更新完成。";
+    } catch (error) {
+      fsUpdateStatus.textContent = `更新失败：${String(error)}`;
+    } finally {
+      unlisten?.();
+      fsUpdating = false;
+      fsUpdateButtons.forEach((item) => { item.disabled = false; });
+    }
+  });
+}
+
 generalForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const updated = {
@@ -606,6 +636,7 @@ async function init() {
     query.focus();
     query.select();
   });
+  await listen("open-settings", () => settings(true));
   await listen("launcher-show", () => {
     if (settingsPanel.hidden) {
       query.focus();

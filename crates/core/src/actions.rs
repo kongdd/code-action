@@ -33,7 +33,7 @@ fn executable(binary: &str) -> PathBuf {
     paths.into_iter().map(|p| p.join(binary)).find(|p| p.is_file()).unwrap_or(path)
 }
 
-fn command(binary: &str) -> Command {
+pub fn command(binary: &str) -> Command {
     #[allow(unused_mut)]
     let mut cmd = Command::new(executable(binary));
     #[cfg(windows)]

@@ -13,6 +13,7 @@ use tauri::{
     Emitter, Manager, State,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut as Hotkey, ShortcutState};
+use tokio::io::{AsyncRead, AsyncReadExt};
 
 type AppState = Mutex<Storage>;
 
@@ -165,6 +166,58 @@ async fn search(
     code_action_core::search(&data, mode, &query, receiver).await
 }
 
+async fn stream_fs_output(mut stream: impl AsyncRead + Unpin, app: tauri::AppHandle) -> Result<(), String> {
+    let mut buffer = [0u8; 4096];
+    let mut pending = Vec::new();
+    loop {
+        let n = stream.read(&mut buffer).await.map_err(|e| e.to_string())?;
+        pending.extend_from_slice(&buffer[..n]);
+        let end = match std::str::from_utf8(&pending) {
+            Err(e) if e.error_len().is_none() && n != 0 => e.valid_up_to(),
+            _ => pending.len(),
+        };
+        if end > 0 {
+            let output = String::from_utf8_lossy(&pending[..end]).into_owned();
+            let _ = app.emit("fs-update-output", output);
+            pending.drain(..end);
+        }
+        if n == 0 { return Ok(()); }
+    }
+}
+
+#[tauri::command]
+async fn update_fs_database(target: String, app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let binary = state.lock().map_err(|e| e.to_string())?.data.settings.fs_binary.clone();
+    let mut command = match target.as_str() {
+        "local" => {
+            let mut command = actions::command(&binary);
+            command.args(["updatedb", "update"]);
+            command
+        }
+        "nas" => {
+            let mut command = actions::command("ssh");
+            command.args([
+                "-o", "BatchMode=yes", "nas",
+                "PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\" fs updatedb update",
+            ]);
+            command
+        }
+        _ => return Err(format!("无效的更新目标：{target}")),
+    };
+    let mut child = command.stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped())
+        .kill_on_drop(true).spawn().map_err(|e| format!("无法启动数据库更新：{e}"))?;
+    let stdout = child.stdout.take().ok_or("无法读取标准输出")?;
+    let stderr = child.stderr.take().ok_or("无法读取标准错误")?;
+    let (status, (), ()) = tokio::try_join!(
+        async { child.wait().await.map_err(|e| e.to_string()) },
+        stream_fs_output(stdout, app.clone()),
+        stream_fs_output(stderr, app),
+    )?;
+    if !status.success() { return Err(format!("数据库更新失败：{status}")); }
+    Ok(())
+}
+
 #[tauri::command]
 async fn remove_history(path: String, state: State<'_, AppState>) -> Result<(), String> {
     let settings = state.lock().map_err(|e| e.to_string())?.data.settings.clone();
@@ -210,7 +263,7 @@ fn main() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             load_store, save_settings, save_preferences, save_shortcuts, search, open_item, copy_text, copy_file, remove_history,
-            hide_window,
+            hide_window, update_fs_database,
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -222,14 +275,19 @@ fn main() {
             app.manage(Mutex::new(storage));
             app.manage(FsCancel::default());
 
-            let show_item = MenuItem::with_id(app, "show", "显示 Code Action", true, None::<&str>)?;
+            let show_item = MenuItem::with_id(app, "show", "显示", true, None::<&str>)?;
+            let settings_item = MenuItem::with_id(app, "settings", "设置", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+            let menu = Menu::with_items(app, &[&show_item, &settings_item, &quit_item])?;
             let mut tray = TrayIconBuilder::new()
                 .tooltip("Code Action")
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => show(app),
+                    "settings" => {
+                        show(app);
+                        let _ = app.emit_to("main", "open-settings", ());
+                    }
                     "quit" => app.exit(0),
                     _ => (),
                 })
