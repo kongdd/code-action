@@ -15,7 +15,7 @@ pub fn config_path() -> Option<PathBuf> {
 pub struct Shortcut {
     pub id: String,
     pub accelerator: String,
-    /// vscode / zed / fs / toggle
+    /// vscode / zed / fs / toggle / clipboard-vscode / clipboard-zed
     pub action: String,
     pub enabled: bool,
     pub auto_copy: bool,
@@ -46,6 +46,8 @@ pub struct Settings {
     pub zed: String,
     pub terminal: String,
     pub shortcuts: Vec<Shortcut>,
+    #[serde(default)]
+    pub clipboard_shortcuts_added: bool,
     /// 功能别名：模式 -> 显示名称
     pub aliases: BTreeMap<String, String>,
 }
@@ -72,7 +74,12 @@ impl Default for Settings {
                 Shortcut { id: "vscode".into(), accelerator: vscode.into(), action: "vscode".into(), ..Shortcut::default() },
                 Shortcut { id: "zed".into(), accelerator: zed.into(), action: "zed".into(), ..Shortcut::default() },
                 Shortcut { id: "fs".into(), accelerator: fs.into(), action: "fs".into(), ..Shortcut::default() },
+                #[cfg(target_os = "macos")]
+                Shortcut { id: "clipboard-vscode".into(), accelerator: "Control+Alt+C".into(), action: "clipboard-vscode".into(), ..Shortcut::default() },
+                #[cfg(target_os = "macos")]
+                Shortcut { id: "clipboard-zed".into(), accelerator: "Control+Alt+Z".into(), action: "clipboard-zed".into(), ..Shortcut::default() },
             ],
+            clipboard_shortcuts_added: true,
             aliases: BTreeMap::new(),
         }
     }
@@ -100,11 +107,22 @@ pub struct Storage {
 
 impl Storage {
     pub fn load(path: PathBuf) -> Result<Self, String> {
-        let data = match fs::read(&path) {
+        let mut data: Store = match fs::read(&path) {
             Ok(bytes) => serde_json::from_slice(&bytes).map_err(|e| format!("配置文件损坏：{e}"))?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Store::default(),
             Err(e) => return Err(e.to_string()),
         };
+        if !data.settings.clipboard_shortcuts_added {
+            #[cfg(target_os = "macos")]
+            for mut shortcut in Settings::default().shortcuts.into_iter().filter(|item| item.id.starts_with("clipboard-")) {
+                if data.settings.shortcuts.iter().any(|item| item.id == shortcut.id) { continue; }
+                if data.settings.shortcuts.iter().any(|item| item.is_active() && item.accelerator.eq_ignore_ascii_case(&shortcut.accelerator)) {
+                    shortcut.enabled = false;
+                }
+                data.settings.shortcuts.push(shortcut);
+            }
+            data.settings.clipboard_shortcuts_added = true;
+        }
         Ok(Self { data, path })
     }
 

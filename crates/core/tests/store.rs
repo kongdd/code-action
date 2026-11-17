@@ -58,6 +58,21 @@ fn round_trip_and_defaults() {
 }
 
 #[test]
+fn legacy_shortcuts_migrate_only_once() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("config.json");
+    fs::write(&path, r#"{"settings":{"shortcuts":[]}}"#).unwrap();
+    let mut storage = Storage::load(path.clone()).unwrap();
+    assert!(storage.data.settings.clipboard_shortcuts_added);
+    #[cfg(target_os = "macos")]
+    assert_eq!(storage.data.settings.shortcuts.len(), 2);
+    let mut data = storage.data.clone();
+    data.settings.shortcuts.clear();
+    storage.save(data).unwrap();
+    assert!(Storage::load(path).unwrap().data.settings.shortcuts.is_empty());
+}
+
+#[test]
 fn damaged_configuration_is_not_overwritten() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("config.json");

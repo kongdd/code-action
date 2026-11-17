@@ -23,6 +23,7 @@ interface Settings {
   zed: string;
   terminal: string;
   shortcuts: Shortcut[];
+  clipboardShortcutsAdded: boolean;
   aliases: Record<string, string>;
 }
 interface Preferences { favorites: string[]; queries: Record<string, string>; mode: string }
@@ -38,6 +39,8 @@ const ACTIONS: [string, string][] = [
   ["vscode", "vsc_action"],
   ["zed", "zed_action"],
   ["fs", "fs_action"],
+  ["clipboard-vscode", "用 VSCode 打开剪贴板路径（macOS）"],
+  ["clipboard-zed", "用 Zed 打开剪贴板路径（macOS）"],
 ];
 
 function element<T extends HTMLElement>(selector: string): T {
@@ -172,6 +175,11 @@ function fill(node: HTMLElement, text: string, words: string[]) {
   if (cursor < text.length) node.append(text.slice(cursor));
 }
 
+function displayPath(value: string, remote: boolean): string {
+  if (!remote) return value;
+  try { return decodeURIComponent(value); } catch { return value; }
+}
+
 function render() {
   results.replaceChildren();
   const words = terms();
@@ -186,9 +194,9 @@ function render() {
     text.className = "text";
     const title = document.createElement("strong");
     const pinned = store.preferences.favorites.includes(item.path);
-    fill(title, (pinned ? "★ " : "") + item.title, words);
+    fill(title, (pinned ? "★ " : "") + displayPath(item.title, item.remote), words);
     const path = document.createElement("span");
-    fill(path, item.path, words);
+    fill(path, displayPath(item.path, item.remote), words);
     text.append(title, path);
     row.append(icon, text);
     const shortcut = document.createElement("span");
@@ -636,6 +644,7 @@ async function init() {
     query.focus();
     query.select();
   });
+  await listen<string>("clipboard-error", (event) => report(event.payload));
   await listen("open-settings", () => settings(true));
   await listen("launcher-show", () => {
     if (settingsPanel.hidden) {

@@ -92,6 +92,20 @@ fn apply_shortcuts(app: &tauri::AppHandle, shortcuts: &[Shortcut]) -> Result<(),
                     toggle(app);
                     return;
                 }
+                if let Some(editor) = match action.as_str() {
+                    "clipboard-vscode" => Some(Action::Vscode),
+                    "clipboard-zed" => Some(Action::Zed),
+                    _ => None,
+                } {
+                    let app = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Err(error) = open_clipboard_path(&app, editor).await {
+                            show(&app);
+                            let _ = app.emit_to("main", "clipboard-error", error);
+                        }
+                    });
+                    return;
+                }
                 show(app);
                 let _ = app.emit_to("main", "shortcut-triggered", ShortcutPayload {
                     mode: action.clone(),
@@ -101,6 +115,30 @@ fn apply_shortcuts(app: &tauri::AppHandle, shortcuts: &[Shortcut]) -> Result<(),
             .map_err(|e| format!("快捷键 {accelerator} 注册失败：{e}"))?;
     }
     Ok(())
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn clipboard_path(text: &str) -> Result<&str, String> {
+    let path = text.trim();
+    if !std::path::Path::new(path).is_absolute() || !std::path::Path::new(path).exists() {
+        return Err("剪贴板不是有效的本地绝对路径".into());
+    }
+    Ok(path)
+}
+
+#[cfg(target_os = "macos")]
+async fn open_clipboard_path(app: &tauri::AppHandle, action: Action) -> Result<(), String> {
+    let output = actions::command("/usr/bin/pbpaste").output().await.map_err(|e| e.to_string())?;
+    if !output.status.success() { return Err("读取剪贴板失败".into()); }
+    let text = String::from_utf8(output.stdout).map_err(|_| "剪贴板不是有效文本")?;
+    let path = clipboard_path(&text)?;
+    let settings = app.state::<AppState>().lock().map_err(|e| e.to_string())?.data.settings.clone();
+    actions::open(&settings, action, path).await
+}
+
+#[cfg(not(target_os = "macos"))]
+async fn open_clipboard_path(_app: &tauri::AppHandle, _action: Action) -> Result<(), String> {
+    Err("剪贴板路径快捷键目前仅支持 macOS".into())
 }
 
 #[tauri::command]
@@ -277,8 +315,9 @@ fn main() {
 
             let show_item = MenuItem::with_id(app, "show", "显示", true, None::<&str>)?;
             let settings_item = MenuItem::with_id(app, "settings", "设置", true, None::<&str>)?;
+            let restart_item = MenuItem::with_id(app, "restart", "重启", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_item, &settings_item, &quit_item])?;
+            let menu = Menu::with_items(app, &[&show_item, &settings_item, &restart_item, &quit_item])?;
             let mut tray = TrayIconBuilder::new()
                 .tooltip("Code Action")
                 .menu(&menu)
@@ -288,6 +327,7 @@ fn main() {
                         show(app);
                         let _ = app.emit_to("main", "open-settings", ());
                     }
+                    "restart" => app.restart(),
                     "quit" => app.exit(0),
                     _ => (),
                 })

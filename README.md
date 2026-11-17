@@ -27,6 +27,7 @@
 | 搜索文件 | `⌘⌃E` | `Ctrl+Alt+E` |
 | 搜索项目，用 Zed 打开 | `⌘⌃Z` | `Ctrl+Alt+Z` |
 | 搜索项目，用 VSCode 打开 | `⌘⌃C` | `Ctrl+Alt+C` |
+| 用 VSCode / Zed 打开剪贴板中的本地路径 | `⌥⌃C` / `⌥⌃Z` | — |
 
 [了解独立版 →](app/README.md)
 

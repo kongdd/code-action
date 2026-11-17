@@ -20,6 +20,17 @@ fn shortcut_payload_matches_frontend() {
 }
 
 #[test]
+fn clipboard_path_requires_existing_absolute_local_path() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().to_str().unwrap();
+    assert_eq!(clipboard_path(&format!("  {path}\n")).unwrap(), path);
+    assert!(clipboard_path("").is_err());
+    assert!(clipboard_path("relative/path").is_err());
+    assert!(clipboard_path("ssh://host/path").is_err());
+    assert!(clipboard_path(dir.path().join("missing").to_str().unwrap()).is_err());
+}
+
+#[test]
 fn default_shortcuts_are_valid_and_unique() {
     let mut ids = std::collections::HashSet::new();
     for shortcut in Settings::default().shortcuts {
