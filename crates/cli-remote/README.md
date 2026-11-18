@@ -1,16 +1,16 @@
-# editor
+# remote-editor
 
 跨平台打开本地目录或 SSH 远程目录。需安装 VSCode 或 Zed 的命令行工具，并将其加入 PATH。
 
 ```bash
-cargo install --path crates/cli-editor
-editor ~/project
-editor ~/project --zed
-editor /home/user/project --host my-server
-editor /home/user/project --zed --host my-server
+cargo install --path crates/cli-remote --bin remote-editor
+remote-editor ~/project
+remote-editor ~/project --zed
+remote-editor /home/user/project --host my-server
+remote-editor /mnt/x/project --host nas
 ```
 
-默认使用 VSCode 和当前目录；相对路径按本机当前目录转换为绝对路径，远程机器上须有对应路径。远程路径须为 Unix 路径，主机使用 SSH 配置中的别名，Windows 使用 `code.cmd`。
+默认使用 VSCode 和当前目录；相对路径按本机当前目录转换为绝对路径。使用 `--host nas` 时，按 [nas-path](#nas-path) 规则转换路径；其他主机不转换。远程路径须为 Unix 路径，主机使用 SSH 配置中的别名，Windows 使用 `code.cmd`。
 
 ## remote-open
 
@@ -18,6 +18,16 @@ editor /home/user/project --zed --host my-server
 
 ```bash
 remote-open --host my-server ./file.pdf
+```
+
+## nas-path
+
+将 `/mnt/x`、`/mnt/z`、`/mnt/y`、`/mnt/o` 分别转换为 `/volume2/GitHub`、`/volume1/CMIP6`、`/volume1/Researches`、`/volume1/CUG-hydro`。相对路径先按当前目录转为绝对路径，再匹配上述挂载点并保留后续路径。未匹配时报错退出，不输出路径。
+
+```bash
+cargo install --path crates/cli-remote --bin nas-path
+nas-path '/mnt/y/my project/data.csv'
+# /volume1/Researches/my project/data.csv
 ```
 
 ## remote-run

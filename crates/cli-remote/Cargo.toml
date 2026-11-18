@@ -3,6 +3,9 @@ name = "cli-remote"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+path = "lib.rs"
+
 [dependencies]
 clap = { version = "4", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }
 
@@ -24,3 +27,7 @@ path = "remote-open.rs"
 [[bin]]
 name = "remote-run"
 path = "remote-run.rs"
+
+[[bin]]
+name = "nas-path"
+path = "nas-path.rs"
