@@ -24,6 +24,7 @@ mockIPC((cmd) => {
       code: "code",
       zed: "zed",
       terminal: "",
+      directoryOpener: "system",
       shortcuts: [
         { id: "toggle", accelerator: "CommandOrControl+Shift+Space", action: "toggle", enabled: true, autoCopy: false },
         { id: "vscode", accelerator: "Command+Control+C", action: "vscode", enabled: true, autoCopy: false },

@@ -36,6 +36,14 @@ impl Shortcut {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DirectoryOpener {
+    #[default]
+    System,
+    DirDeck,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Settings {
@@ -45,6 +53,7 @@ pub struct Settings {
     pub code: String,
     pub zed: String,
     pub terminal: String,
+    pub directory_opener: DirectoryOpener,
     pub shortcuts: Vec<Shortcut>,
     #[serde(default)]
     pub clipboard_shortcuts_added: bool,
@@ -69,6 +78,7 @@ impl Default for Settings {
             code: "code".into(),
             zed: "zed".into(),
             terminal: String::new(),
+            directory_opener: DirectoryOpener::default(),
             shortcuts: vec![
                 Shortcut { id: "toggle".into(), accelerator: "CommandOrControl+Shift+Space".into(), action: "toggle".into(), ..Shortcut::default() },
                 Shortcut { id: "vscode".into(), accelerator: vscode.into(), action: "vscode".into(), ..Shortcut::default() },

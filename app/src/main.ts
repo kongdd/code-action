@@ -22,6 +22,7 @@ interface Settings {
   code: string;
   zed: string;
   terminal: string;
+  directoryOpener: "system" | "dirdeck";
   shortcuts: Shortcut[];
   clipboardShortcutsAdded: boolean;
   aliases: Record<string, string>;
@@ -58,6 +59,15 @@ const loading = element("#loading");
 const panel = element("#search-panel");
 const settingsPanel = element("#settings");
 const generalForm = element<HTMLFormElement>("form.pane");
+const IS_MAC = navigator.userAgent.includes("Mac");
+const directoryOpener = element<HTMLSelectElement>('select[name="directoryOpener"]');
+if (IS_MAC) {
+  directoryOpener.options[0].textContent = "Finder";
+  directoryOpener.add(new Option("DirDeck", "dirdeck"));
+} else if (navigator.userAgent.includes("Windows")) {
+  directoryOpener.options[0].textContent = "资源管理器";
+}
+
 const menu = element("#context-menu");
 const modeToggle = element<HTMLButtonElement>("#mode-toggle");
 const modeMenu = element<HTMLUListElement>("#mode-menu");
@@ -340,7 +350,6 @@ function context(event: MouseEvent, item: Item) {
 /* ---------- 快捷键设置 ---------- */
 
 // 组合键文本与 global-hotkey 解析格式一致：macOS 的 ⌘ 记为 Command，其他平台的 Win 键记为 Super。
-const IS_MAC = navigator.userAgent.includes("Mac");
 const MODIFIER_LABELS: [string, string][] = [
   ["Meta", IS_MAC ? "Command" : "Super"],
   ["Control", "Control"],
@@ -479,9 +488,12 @@ function settings(visible: boolean) {
   if (visible) {
     for (const [name, value] of Object.entries(store.settings)) {
       if (name === "shortcuts" || name === "aliases") continue;
-      const input = generalForm.elements.namedItem(name) as HTMLInputElement;
-      if (input.type === "checkbox") input.checked = Boolean(value);
-      else input.value = String(value);
+      const field = generalForm.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement;
+      if (field instanceof HTMLInputElement && field.type === "checkbox") {
+        field.checked = Boolean(value);
+      } else {
+        field.value = name === "directoryOpener" && !IS_MAC ? "system" : String(value);
+      }
     }
     renderShortcuts();
     renderAliases();

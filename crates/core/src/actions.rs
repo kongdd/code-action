@@ -130,6 +130,33 @@ fn open_path(target: &str) -> Command {
     { let mut cmd = command("xdg-open"); cmd.arg(target); cmd }
 }
 
+async fn open_directory(_settings: &Settings, path: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        use crate::store::DirectoryOpener;
+
+        let app = match _settings.directory_opener {
+            DirectoryOpener::System => "Finder",
+            DirectoryOpener::DirDeck => {
+                // Prefer the bundle path, even without Launch Services registration.
+                let bundle = "/Applications/DirDeck.app";
+                if Path::new(bundle).is_dir() { bundle } else { "DirDeck" }
+            }
+        };
+        let output = command("/usr/bin/open")
+            .args(["-a", app, "--", path])
+            .output()
+            .await
+            .map_err(|e| format!("无法用 {app} 打开目录：{e}"))?;
+        if !output.status.success() {
+            return Err(format!("无法用 {app} 打开目录：{}", String::from_utf8_lossy(&output.stderr).trim()));
+        }
+        Ok(())
+    }
+    #[cfg(not(target_os = "macos"))]
+    spawn_detached(open_path(path))
+}
+
 fn terminal(settings: &Settings, dir: &str) -> Command {
     if !settings.terminal.trim().is_empty() {
         let mut cmd = command(settings.terminal.trim());
@@ -283,18 +310,27 @@ pub async fn open(settings: &Settings, action: Action, target: &str) -> Result<(
     if remote && matches!(action, Action::Default | Action::Terminal | Action::Directory) {
         return Err("远程项目只能通过编辑器打开".into());
     }
-    let mut cmd = match action {
+    let cmd = match action {
         Action::Vscode => editor(&settings.code, target),
         Action::Zed if target.starts_with("vscode-remote:") => editor(&settings.zed, &zed_ssh_target(target)?),
         Action::Zed => editor(&settings.zed, target),
+        #[cfg(target_os = "macos")]
+        Action::Default if Path::new(target).is_dir() => return open_directory(settings, target).await,
         Action::Default => open_path(target),
         Action::Directory | Action::Terminal => {
             let path = Path::new(target);
             let dir = if path.is_dir() { path } else { path.parent().ok_or("无法定位目录")? };
             let dir = dir.to_str().ok_or("目录编码无效")?;
-            if matches!(action, Action::Directory) { open_path(dir) } else { terminal(settings, dir) }
+            if matches!(action, Action::Directory) {
+                return open_directory(settings, dir).await;
+            }
+            terminal(settings, dir)
         }
     };
+    spawn_detached(cmd)
+}
+
+fn spawn_detached(mut cmd: Command) -> Result<(), String> {
     // No shell evaluation; all paths are passed as individual arguments.
     cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
     let mut child = cmd.spawn().map_err(|e| format!("无法启动打开命令：{e}"))?;

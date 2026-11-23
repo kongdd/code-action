@@ -1,6 +1,16 @@
 use super::*;
 
 #[test]
+fn directory_opener_defaults_and_round_trips() {
+    let legacy: Settings = serde_json::from_str("{}").unwrap();
+    assert_eq!(legacy.directory_opener, DirectoryOpener::System);
+
+    let chosen: Settings = serde_json::from_str(r#"{"directoryOpener":"dirdeck"}"#).unwrap();
+    assert_eq!(chosen.directory_opener, DirectoryOpener::DirDeck);
+    assert_eq!(serde_json::to_value(&chosen).unwrap()["directoryOpener"], "dirdeck");
+}
+
+#[test]
 fn legacy_shortcuts_remain_enabled() {
     let shortcut: Shortcut = serde_json::from_value(serde_json::json!({
         "accelerator": "Command+Control+E", "action": "fs", "autoCopy": false,

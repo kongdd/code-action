@@ -81,6 +81,9 @@
           <label>fs 可执行文件<input name="fsBinary" required /></label>
           <label>VSCode 可执行文件<input name="code" required /></label>
           <label>Zed 可执行文件<input name="zed" required /></label>
+          <label>打开目录<select name="directoryOpener">
+            <option value="system">系统默认文件管理器</option>
+          </select></label>
           <label>终端可执行文件<input name="terminal" placeholder="留空使用系统默认终端" /></label>
           <small>填写可执行文件名或完整路径，不附加参数。所有数据仅保存在本机。</small>
           <div><button type="submit">保存</button><button id="settings-cancel" type="button">取消</button></div>
