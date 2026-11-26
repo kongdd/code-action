@@ -135,14 +135,13 @@ async fn open_directory(_settings: &Settings, path: &str) -> Result<(), String> 
     {
         use crate::store::DirectoryOpener;
 
-        let app = match _settings.directory_opener {
-            DirectoryOpener::System => "Finder",
-            DirectoryOpener::DirDeck => {
-                // Prefer the bundle path, even without Launch Services registration.
-                let bundle = "/Applications/DirDeck.app";
-                if Path::new(bundle).is_dir() { bundle } else { "DirDeck" }
-            }
+        let (name, bundle) = match _settings.directory_opener {
+            DirectoryOpener::System => ("Finder", None),
+            DirectoryOpener::DirDeck => ("DirDeck", Some("/Applications/DirDeck.app")),
+            DirectoryOpener::Explorer => ("Explorer.rs.app", Some("/Applications/Explorer.rs.app")),
         };
+        // Prefer the bundle path, even without Launch Services registration.
+        let app = bundle.filter(|path| Path::new(path).is_dir()).unwrap_or(name);
         let output = command("/usr/bin/open")
             .args(["-a", app, "--", path])
             .output()

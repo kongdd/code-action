@@ -42,6 +42,7 @@ pub enum DirectoryOpener {
     #[default]
     System,
     DirDeck,
+    Explorer,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

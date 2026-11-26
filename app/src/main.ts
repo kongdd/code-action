@@ -22,7 +22,7 @@ interface Settings {
   code: string;
   zed: string;
   terminal: string;
-  directoryOpener: "system" | "dirdeck";
+  directoryOpener: "system" | "dirdeck" | "explorer";
   shortcuts: Shortcut[];
   clipboardShortcutsAdded: boolean;
   aliases: Record<string, string>;
@@ -64,6 +64,7 @@ const directoryOpener = element<HTMLSelectElement>('select[name="directoryOpener
 if (IS_MAC) {
   directoryOpener.options[0].textContent = "Finder";
   directoryOpener.add(new Option("DirDeck", "dirdeck"));
+  directoryOpener.add(new Option("Explorer", "explorer"));
 } else if (navigator.userAgent.includes("Windows")) {
   directoryOpener.options[0].textContent = "资源管理器";
 }

@@ -5,9 +5,15 @@ fn directory_opener_defaults_and_round_trips() {
     let legacy: Settings = serde_json::from_str("{}").unwrap();
     assert_eq!(legacy.directory_opener, DirectoryOpener::System);
 
-    let chosen: Settings = serde_json::from_str(r#"{"directoryOpener":"dirdeck"}"#).unwrap();
-    assert_eq!(chosen.directory_opener, DirectoryOpener::DirDeck);
-    assert_eq!(serde_json::to_value(&chosen).unwrap()["directoryOpener"], "dirdeck");
+    for (value, opener) in [
+        ("dirdeck", DirectoryOpener::DirDeck),
+        ("explorer", DirectoryOpener::Explorer),
+    ] {
+        let chosen: Settings =
+            serde_json::from_value(serde_json::json!({ "directoryOpener": value })).unwrap();
+        assert_eq!(chosen.directory_opener, opener);
+        assert_eq!(serde_json::to_value(&chosen).unwrap()["directoryOpener"], value);
+    }
 }
 
 #[test]
